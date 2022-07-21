@@ -10,6 +10,9 @@ use crate::precompress::{AlgStat, Algorithms, Compressor};
 mod encode;
 mod precompress;
 
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 /// Precompress a directory of static files.
 #[derive(Parser, Debug)]
 #[clap(version, about)]
