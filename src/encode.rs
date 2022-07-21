@@ -11,12 +11,23 @@ use flate2::{
 };
 use zstd::Encoder;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct Quality {
-    pub(crate) brotli: Option<u8>,
-    pub(crate) deflate: Option<u8>,
-    pub(crate) gzip: Option<u8>,
-    pub(crate) zstd: Option<u8>,
+    pub(crate) brotli: u8,
+    pub(crate) deflate: u8,
+    pub(crate) gzip: u8,
+    pub(crate) zstd: u8,
+}
+
+impl Quality {
+    pub(crate) fn new(brotli: u8, deflate: u8, gzip: u8, zstd: u8) -> Self {
+        Quality {
+            brotli,
+            deflate,
+            gzip,
+            zstd,
+        }
+    }
 }
 
 pub(crate) struct Context {
@@ -34,10 +45,10 @@ impl Context {
         Context {
             read_buf: vec![0; buf_size],
             write_buf: vec![0; buf_size],
-            brotli_quality: quality.brotli.unwrap_or(11) as i32,
-            deflate_quality: quality.deflate.unwrap_or(9) as u32,
-            gzip_quality: quality.gzip.unwrap_or(9) as u32,
-            zstd_quality: quality.zstd.unwrap_or(21) as i32,
+            brotli_quality: quality.brotli as i32,
+            deflate_quality: quality.deflate as u32,
+            gzip_quality: quality.gzip as u32,
+            zstd_quality: quality.zstd as i32,
         }
     }
 

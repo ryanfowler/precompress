@@ -28,13 +28,38 @@ ARGS:
     <PATH>    Directory to recursively compress files in
 
 OPTIONS:
-        --brotli <BROTLI>      Enable brotli compression [possible values: true, false]
-        --deflate <DEFLATE>    Enable deflate compression [possible values: true, false]
-        --gzip <GZIP>          Enable gzip compression [possible values: true, false]
-    -h, --help                 Print help information
-    -t, --threads <THREADS>    Number of threads to use; "0" uses the number of cpus [default: 0]
-    -V, --version              Print version information
-        --zstd <ZSTD>          Enable zstd compression [possible values: true, false]
+        --brotli <BROTLI>
+            Enable brotli compression [possible values: true, false]
+
+        --brotli-quality <BROTLI_QUALITY>
+            Set brotli compression quality [default: 11]
+
+        --deflate <DEFLATE>
+            Enable deflate compression [possible values: true, false]
+
+        --deflate-quality <DEFLATE_QUALITY>
+            Set deflate compression quality [default: 9]
+
+        --gzip <GZIP>
+            Enable gzip compression [possible values: true, false]
+
+        --gzip-quality <GZIP_QUALITY>
+            Set gzip compression quality [default: 9]
+
+    -h, --help
+            Print help information
+
+    -t, --threads <THREADS>
+            Number of threads to use; "0" uses the number of cpus [default: 0]
+
+    -V, --version
+            Print version information
+
+        --zstd <ZSTD>
+            Enable zstd compression [possible values: true, false]
+
+        --zstd-quality <ZSTD_QUALITY>
+            Set zstd compression quality [default: 21]
 ```
 
 ### Example
@@ -47,7 +72,6 @@ precompress --brotli --deflate --gzip .
 
 ## TODO
 
-- allow customizing compression quality per algorithm
 - allow custom include/exclude globs
 - add minimum file size constraint
 

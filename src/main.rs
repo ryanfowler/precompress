@@ -14,6 +14,42 @@ mod precompress;
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
+fn main() {
+    let args = Args::parse();
+    let threads = match args.threads {
+        0 => num_cpus::get(),
+        t => t,
+    };
+    let quality = Quality::new(
+        args.brotli_quality,
+        args.deflate_quality,
+        args.gzip_quality,
+        args.zstd_quality,
+    );
+    let algs = Algorithms::new(args.brotli, args.deflate, args.gzip, args.zstd);
+
+    let algs_enabled = algs.enabled();
+    if algs_enabled.is_empty() {
+        eprintln!("Error: no compression algorithms selected");
+        exit(1);
+    }
+
+    let cmp = Compressor::new(threads, quality, algs);
+    let start = Instant::now();
+    let stats = cmp.precompress(args.path);
+    let took = start.elapsed();
+
+    println!(
+        "Compressed {} files in {}",
+        stats.num_files,
+        format_duration(took)
+    );
+    println!("Data compression:");
+    for alg in algs_enabled {
+        print_alg_savings(alg, &stats);
+    }
+}
+
 /// Precompress a directory of static files.
 #[derive(Parser, Debug)]
 #[clap(version, about)]
@@ -37,40 +73,25 @@ struct Args {
     #[clap(long, action, takes_value = true, default_missing_value = "true")]
     zstd: Option<bool>,
 
+    /// Set brotli compression quality.
+    #[clap(long, default_value = "11")]
+    brotli_quality: u8,
+
+    /// Set deflate compression quality.
+    #[clap(long, default_value = "9")]
+    deflate_quality: u8,
+
+    /// Set gzip compression quality.
+    #[clap(long, default_value = "9")]
+    gzip_quality: u8,
+
+    /// Set zstd compression quality.
+    #[clap(long, default_value = "21")]
+    zstd_quality: u8,
+
     /// Number of threads to use; "0" uses the number of cpus.
     #[clap(short, long, default_value = "0")]
     threads: usize,
-}
-
-fn main() {
-    let args = Args::parse();
-    let threads = match args.threads {
-        0 => num_cpus::get(),
-        t => t,
-    };
-    let quality = Quality::default();
-    let algs = Algorithms::new(args.brotli, args.deflate, args.gzip, args.zstd);
-
-    let algs_enabled = algs.enabled();
-    if algs_enabled.is_empty() {
-        eprintln!("Error: no compression algorithms selected");
-        exit(1);
-    }
-
-    let cmp = Compressor::new(threads, quality, algs);
-    let start = Instant::now();
-    let stats = cmp.precompress(args.path);
-    let took = start.elapsed();
-
-    println!(
-        "Compressed {} files in {}",
-        stats.num_files,
-        format_duration(took)
-    );
-    println!("Data compression:");
-    for alg in algs_enabled {
-        print_alg_savings(alg, &stats);
-    }
 }
 
 fn print_alg_savings(alg: Algorithm, stats: &Stats) {
