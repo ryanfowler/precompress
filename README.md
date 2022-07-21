@@ -32,7 +32,7 @@ OPTIONS:
         --deflate <DEFLATE>    Enable deflate compression [possible values: true, false]
         --gzip <GZIP>          Enable gzip compression [possible values: true, false]
     -h, --help                 Print help information
-    -t, --threads <THREADS>    Number of threads to use (default: number of cpus) [default: 0]
+    -t, --threads <THREADS>    Number of threads to use; "0" uses the number of cpus [default: 0]
     -V, --version              Print version information
         --zstd <ZSTD>          Enable zstd compression [possible values: true, false]
 ```
