@@ -73,17 +73,8 @@ fn main() {
         format_duration(took)
     );
     println!("Data compression:");
-    if algs.brotli {
-        print_alg_savings("brotli", stats.brotli);
-    }
-    if algs.deflate {
-        print_alg_savings("deflate", stats.deflate);
-    }
-    if algs.gzip {
-        print_alg_savings("gzip", stats.gzip);
-    }
-    if algs.zstd {
-        print_alg_savings("zstd", stats.zstd);
+    for alg in algs.enabled() {
+        print_alg_savings(alg.name(), stats.for_algorithm(alg));
     }
 }
 

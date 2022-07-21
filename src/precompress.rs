@@ -20,6 +20,15 @@ pub(crate) enum Algorithm {
 }
 
 impl Algorithm {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::Brotli => "brotli",
+            Self::Deflate => "deflate",
+            Self::Gzip => "gzip",
+            Self::Zstd => "zstd",
+        }
+    }
+
     fn extension(self) -> &'static str {
         match self {
             Self::Brotli => ".br",
@@ -38,6 +47,25 @@ pub(crate) struct Algorithms {
     pub(crate) zstd: bool,
 }
 
+impl Algorithms {
+    pub(crate) fn enabled(&self) -> Vec<Algorithm> {
+        let mut out = Vec::with_capacity(4);
+        if self.brotli {
+            out.push(Algorithm::Brotli);
+        }
+        if self.deflate {
+            out.push(Algorithm::Deflate);
+        }
+        if self.gzip {
+            out.push(Algorithm::Gzip);
+        }
+        if self.zstd {
+            out.push(Algorithm::Zstd);
+        }
+        out
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Stats {
     pub(crate) num_files: u64,
@@ -47,6 +75,17 @@ pub(crate) struct Stats {
     pub(crate) deflate: AlgStat,
     pub(crate) gzip: AlgStat,
     pub(crate) zstd: AlgStat,
+}
+
+impl Stats {
+    pub(crate) fn for_algorithm(&self, alg: Algorithm) -> AlgStat {
+        match alg {
+            Algorithm::Brotli => self.brotli,
+            Algorithm::Deflate => self.deflate,
+            Algorithm::Gzip => self.gzip,
+            Algorithm::Zstd => self.zstd,
+        }
+    }
 }
 
 impl std::ops::Add<Stats> for Stats {
@@ -111,6 +150,7 @@ impl Compressor {
             handles.push(spawn(move || Compressor::worker(rx, quality)));
         }
 
+        let enabled = self.algorithms.enabled();
         let walk = ignore::WalkBuilder::new(&path)
             .ignore(false)
             .git_exclude(false)
@@ -128,21 +168,9 @@ impl Compressor {
             };
             let path = entry.path();
             if should_compress(path) && !path.is_symlink() && path.is_file() {
-                if self.algorithms.brotli {
+                for alg in &enabled {
                     let path = path.to_path_buf();
-                    tx.send((Algorithm::Brotli, path)).expect("channel send");
-                }
-                if self.algorithms.deflate {
-                    let path = path.to_path_buf();
-                    tx.send((Algorithm::Deflate, path)).expect("channel send");
-                }
-                if self.algorithms.gzip {
-                    let path = path.to_path_buf();
-                    tx.send((Algorithm::Gzip, path)).expect("channel send");
-                }
-                if self.algorithms.zstd {
-                    let path = path.to_path_buf();
-                    tx.send((Algorithm::Zstd, path)).expect("channel send");
+                    tx.send((*alg, path)).expect("unable to send on channel")
                 }
             }
         }
