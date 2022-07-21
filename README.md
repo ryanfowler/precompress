@@ -44,3 +44,14 @@ Precompress the files in the current directory using brotli, deflate, and gzip:
 ```
 precompress --brotli --deflate --gzip .
 ```
+
+## TODO
+
+- allow customizing compression quality per algorithm
+- allow custom include/exclude globs
+- add minimum file size constraint
+
+## License
+
+`precompress` is released under the MIT license.
+Please see the [LICENSE](./LICENSE) file for more details.
