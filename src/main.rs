@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::process::exit;
+use std::time::{Duration, Instant};
 
 use clap::Parser;
 
@@ -62,19 +63,34 @@ fn main() {
     }
 
     let cmp = Compressor::new(threads, quality, algs);
+    let start = Instant::now();
     let stats = cmp.precompress(args.path);
+    let took = start.elapsed();
 
-    println!("Compressed {} files", stats.num_files);
+    println!(
+        "Compressed {} files in {}",
+        stats.num_files,
+        format_duration(took)
+    );
+    println!("Total CPU time:");
     if algs.brotli {
-        println!("brotli: {:?}", stats.brotli_time);
+        println!("  brotli: {}", format_duration(stats.brotli_time));
     }
     if algs.deflate {
-        println!("deflate: {:?}", stats.deflate_time);
+        println!("  deflate: {}", format_duration(stats.deflate_time));
     }
     if algs.gzip {
-        println!("gzip: {:?}", stats.gzip_time);
+        println!("  gzip: {}", format_duration(stats.gzip_time));
     }
     if algs.zstd {
-        println!("zstd: {:?}", stats.zstd_time);
+        println!("  zstd: {}", format_duration(stats.zstd_time));
+    }
+}
+
+fn format_duration(dur: Duration) -> String {
+    if dur.as_millis() < 1_000 {
+        format!("{}ms", dur.as_millis())
+    } else {
+        format!("{}s", dur.as_secs())
     }
 }
