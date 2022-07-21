@@ -97,9 +97,10 @@ struct Args {
 fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     let stat = stats.for_algorithm(alg);
     println!(
-        "  {}: {}%",
+        "  {}: {}% ({} cpu time)",
         alg,
-        calc_savings(stat.saved_bytes, stat.total_bytes)
+        calc_savings(stat.saved_bytes, stat.total_bytes),
+        format_duration(stat.total_time),
     );
 }
 
