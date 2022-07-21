@@ -18,7 +18,7 @@ cargo install precompress
 
 ```
 $ precompress -h
-precompress 0.1.1
+precompress 0.1.2
 Precompress a directory of assets
 
 USAGE:
