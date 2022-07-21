@@ -1,0 +1,32 @@
+[package]
+name = "precompress"
+version = "0.1.0"
+description = "Precompress a directory of assets"
+authors = ["Ryan Fowler <ryan.fowler19@gmail.com>"]
+repository = "https://github.com/ryanfowler/precompress"
+categories = ["command-line-utilities"]
+keywords = ["compress", "static", "assets", "brotli", "deflate", "gzip", "zstd"]
+license = "MIT"
+edition = "2021"
+
+[[bin]]
+path = "src/main.rs"
+name = "precompress"
+
+[profile.release]
+codegen-units = 1
+debug = false
+lto = "fat"
+opt-level = 3
+strip = "debuginfo"
+
+[dependencies]
+anyhow = { version = "1.0.58" }
+brotli = { version = "3.3.4" }
+clap = { version = "3.2", features = ["derive"] }
+crossbeam = { version = "0.8.1" }
+flate2 = { version = "1.0.24" }
+ignore = { version = "0.4.18" }
+num_cpus = { version = "1.13" }
+phf = { version = "0.11.0", features = ["macros"] }
+zstd = { version = "0.11.2" }
