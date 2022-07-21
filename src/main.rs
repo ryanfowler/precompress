@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use clap::Parser;
 
 use crate::encode::Quality;
-use crate::precompress::{Algorithms, Compressor};
+use crate::precompress::{AlgStat, Algorithms, Compressor};
 
 mod encode;
 mod precompress;
@@ -72,19 +72,31 @@ fn main() {
         stats.num_files,
         format_duration(took)
     );
-    println!("Total CPU time:");
+    println!("Data compression:");
     if algs.brotli {
-        println!("  brotli: {}", format_duration(stats.brotli_time));
+        print_alg_savings("brotli", stats.brotli);
     }
     if algs.deflate {
-        println!("  deflate: {}", format_duration(stats.deflate_time));
+        print_alg_savings("deflate", stats.deflate);
     }
     if algs.gzip {
-        println!("  gzip: {}", format_duration(stats.gzip_time));
+        print_alg_savings("gzip", stats.gzip);
     }
     if algs.zstd {
-        println!("  zstd: {}", format_duration(stats.zstd_time));
+        print_alg_savings("zstd", stats.zstd);
     }
+}
+
+fn print_alg_savings(alg: &str, stat: AlgStat) {
+    println!(
+        "  {}: {}%",
+        alg,
+        calculate_savings(stat.saved_bytes, stat.total_bytes)
+    );
+}
+
+fn calculate_savings(saved: i64, total: u64) -> u8 {
+    ((saved as f64 / (saved as f64 + total as f64)) * 100.0) as u8
 }
 
 fn format_duration(dur: Duration) -> String {

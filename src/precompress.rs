@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use anyhow::Result;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
 use crate::encode::{Context, Quality};
@@ -42,10 +43,10 @@ pub(crate) struct Stats {
     pub(crate) num_files: u64,
     pub(crate) num_errors: u64,
 
-    pub(crate) brotli_time: Duration,
-    pub(crate) deflate_time: Duration,
-    pub(crate) gzip_time: Duration,
-    pub(crate) zstd_time: Duration,
+    pub(crate) brotli: AlgStat,
+    pub(crate) deflate: AlgStat,
+    pub(crate) gzip: AlgStat,
+    pub(crate) zstd: AlgStat,
 }
 
 impl std::ops::Add<Stats> for Stats {
@@ -55,10 +56,29 @@ impl std::ops::Add<Stats> for Stats {
         Stats {
             num_files: self.num_files + rhs.num_files,
             num_errors: self.num_errors + rhs.num_errors,
-            brotli_time: self.brotli_time + rhs.brotli_time,
-            deflate_time: self.deflate_time + rhs.deflate_time,
-            gzip_time: self.gzip_time + rhs.gzip_time,
-            zstd_time: self.zstd_time + rhs.zstd_time,
+            brotli: self.brotli + rhs.brotli,
+            deflate: self.deflate + rhs.deflate,
+            gzip: self.gzip + rhs.gzip,
+            zstd: self.zstd + rhs.zstd,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct AlgStat {
+    pub(crate) total_time: Duration,
+    pub(crate) total_bytes: u64,
+    pub(crate) saved_bytes: i64,
+}
+
+impl std::ops::Add<AlgStat> for AlgStat {
+    type Output = AlgStat;
+
+    fn add(self, rhs: AlgStat) -> Self::Output {
+        AlgStat {
+            total_time: self.total_time + rhs.total_time,
+            total_bytes: self.total_bytes + rhs.total_bytes,
+            saved_bytes: self.saved_bytes + rhs.saved_bytes,
         }
     }
 }
@@ -142,29 +162,49 @@ impl Compressor {
 
         while let Ok((algorithm, pathbuf)) = rx.recv() {
             let start = Instant::now();
-            if let Err(err) = Compressor::encode_file(&mut ctx, algorithm, &pathbuf) {
-                eprintln!("Warning: {}: {}", pathbuf.display(), err);
-                stats.num_errors += 1;
-            } else {
-                let dur = start.elapsed();
-                match algorithm {
-                    Algorithm::Brotli => stats.brotli_time += dur,
-                    Algorithm::Deflate => stats.deflate_time += dur,
-                    Algorithm::Gzip => stats.gzip_time += dur,
-                    Algorithm::Zstd => stats.zstd_time += dur,
+            match Compressor::encode_file(&mut ctx, algorithm, &pathbuf) {
+                Err(err) => {
+                    eprintln!("Warning: {}: {}", pathbuf.display(), err);
+                    stats.num_errors += 1;
                 }
-                stats.num_files += 1;
+                Ok((src, dst)) => {
+                    let dur = start.elapsed();
+                    match algorithm {
+                        Algorithm::Brotli => {
+                            stats.brotli.total_time += dur;
+                            stats.brotli.saved_bytes += (src - dst) as i64;
+                            stats.brotli.total_bytes += dst;
+                        }
+                        Algorithm::Deflate => {
+                            stats.deflate.total_time += dur;
+                            stats.deflate.saved_bytes += (src - dst) as i64;
+                            stats.deflate.total_bytes += dst;
+                        }
+                        Algorithm::Gzip => {
+                            stats.gzip.total_time += dur;
+                            stats.gzip.saved_bytes += (src - dst) as i64;
+                            stats.gzip.total_bytes += dst;
+                        }
+                        Algorithm::Zstd => {
+                            stats.zstd.total_time += dur;
+                            stats.zstd.saved_bytes += (src - dst) as i64;
+                            stats.zstd.total_bytes += dst;
+                        }
+                    }
+                    stats.num_files += 1;
+                }
             }
         }
 
         stats
     }
 
-    fn encode_file(ctx: &mut Context, alg: Algorithm, path: &PathBuf) -> anyhow::Result<()> {
+    fn encode_file(ctx: &mut Context, alg: Algorithm, path: &PathBuf) -> Result<(u64, u64)> {
         let mut src = File::open(path)?;
+        let src_size = src.metadata()?.len();
 
         let mut file_name = match path.file_name() {
-            None => return Ok(()),
+            None => return Ok((0, 0)),
             Some(name) => name,
         }
         .to_os_string();
@@ -178,7 +218,8 @@ impl Compressor {
             Algorithm::Gzip => ctx.write_gzip(&mut src, &mut dst)?,
             Algorithm::Zstd => ctx.write_zstd(&mut src, &mut dst)?,
         };
-        Ok(())
+        let dst_size = dst.metadata()?.len();
+        Ok((src_size, dst_size))
     }
 }
 
