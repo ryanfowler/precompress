@@ -3,9 +3,10 @@ use std::process::exit;
 use std::time::{Duration, Instant};
 
 use clap::Parser;
+use precompress::Algorithm;
 
 use crate::encode::Quality;
-use crate::precompress::{AlgStat, Algorithms, Compressor};
+use crate::precompress::{Algorithms, Compressor, Stats};
 
 mod encode;
 mod precompress;
@@ -47,20 +48,11 @@ fn main() {
         0 => num_cpus::get(),
         t => t,
     };
-    let quality = Quality {
-        brotli: None,
-        deflate: None,
-        gzip: None,
-        zstd: None,
-    };
-    let algs = Algorithms {
-        brotli: args.brotli.unwrap_or(false),
-        deflate: args.deflate.unwrap_or(false),
-        gzip: args.gzip.unwrap_or(false),
-        zstd: args.zstd.unwrap_or(false),
-    };
+    let quality = Quality::default();
+    let algs = Algorithms::new(args.brotli, args.deflate, args.gzip, args.zstd);
 
-    if !algs.brotli && !algs.deflate && !algs.gzip && !algs.zstd {
+    let algs_enabled = algs.enabled();
+    if algs_enabled.is_empty() {
         eprintln!("Error: no compression algorithms selected");
         exit(1);
     }
@@ -76,20 +68,21 @@ fn main() {
         format_duration(took)
     );
     println!("Data compression:");
-    for alg in algs.enabled() {
-        print_alg_savings(alg.name(), stats.for_algorithm(alg));
+    for alg in algs_enabled {
+        print_alg_savings(alg, &stats);
     }
 }
 
-fn print_alg_savings(alg: &str, stat: AlgStat) {
+fn print_alg_savings(alg: Algorithm, stats: &Stats) {
+    let stat = stats.for_algorithm(alg);
     println!(
         "  {}: {}%",
         alg,
-        calculate_savings(stat.saved_bytes, stat.total_bytes)
+        calc_savings(stat.saved_bytes, stat.total_bytes)
     );
 }
 
-fn calculate_savings(saved: i64, total: u64) -> u8 {
+fn calc_savings(saved: i64, total: u64) -> u8 {
     ((saved as f64 / (saved as f64 + total as f64)) * 100.0) as u8
 }
 

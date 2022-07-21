@@ -19,16 +19,19 @@ pub(crate) enum Algorithm {
     Zstd,
 }
 
-impl Algorithm {
-    pub(crate) fn name(self) -> &'static str {
-        match self {
-            Self::Brotli => "brotli",
-            Self::Deflate => "deflate",
-            Self::Gzip => "gzip",
-            Self::Zstd => "zstd",
-        }
+impl std::fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let out = match self {
+            Algorithm::Brotli => "brotli",
+            Algorithm::Deflate => "deflate",
+            Algorithm::Gzip => "gzip",
+            Algorithm::Zstd => "zstd",
+        };
+        f.write_str(out)
     }
+}
 
+impl Algorithm {
     fn extension(self) -> &'static str {
         match self {
             Self::Brotli => ".br",
@@ -48,6 +51,20 @@ pub(crate) struct Algorithms {
 }
 
 impl Algorithms {
+    pub(crate) fn new(
+        brotli: Option<bool>,
+        deflate: Option<bool>,
+        gzip: Option<bool>,
+        zstd: Option<bool>,
+    ) -> Self {
+        Algorithms {
+            brotli: brotli.unwrap_or(false),
+            deflate: deflate.unwrap_or(false),
+            gzip: gzip.unwrap_or(false),
+            zstd: zstd.unwrap_or(false),
+        }
+    }
+
     pub(crate) fn enabled(&self) -> Vec<Algorithm> {
         let mut out = Vec::with_capacity(4);
         if self.brotli {
