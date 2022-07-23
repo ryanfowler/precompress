@@ -64,10 +64,10 @@ OPTIONS:
 
 ### Example
 
-Precompress the files in the current directory using brotli, deflate, and gzip:
+Precompress the files in the current directory using brotli, gzip, and zstd:
 
 ```
-precompress --brotli --deflate --gzip .
+precompress . --brotli --gzip --zstd
 ```
 
 ## TODO
