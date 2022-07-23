@@ -19,17 +19,6 @@ pub(crate) struct Quality {
     pub(crate) zstd: u8,
 }
 
-impl Quality {
-    pub(crate) fn new(brotli: u8, deflate: u8, gzip: u8, zstd: u8) -> Self {
-        Quality {
-            brotli,
-            deflate,
-            gzip,
-            zstd,
-        }
-    }
-}
-
 pub(crate) struct Context {
     read_buf: Vec<u8>,
     write_buf: Vec<u8>,

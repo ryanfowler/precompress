@@ -51,20 +51,6 @@ pub(crate) struct Algorithms {
 }
 
 impl Algorithms {
-    pub(crate) fn new(
-        brotli: Option<bool>,
-        deflate: Option<bool>,
-        gzip: Option<bool>,
-        zstd: Option<bool>,
-    ) -> Self {
-        Algorithms {
-            brotli: brotli.unwrap_or(false),
-            deflate: deflate.unwrap_or(false),
-            gzip: gzip.unwrap_or(false),
-            zstd: zstd.unwrap_or(false),
-        }
-    }
-
     pub(crate) fn enabled(&self) -> Vec<Algorithm> {
         let mut out = Vec::with_capacity(4);
         if self.brotli {

@@ -20,17 +20,22 @@ fn main() {
         0 => num_cpus::get(),
         t => t,
     };
-    let quality = Quality::new(
-        args.brotli_quality,
-        args.deflate_quality,
-        args.gzip_quality,
-        args.zstd_quality,
-    );
-    let algs = Algorithms::new(args.brotli, args.deflate, args.gzip, args.zstd);
+    let quality = Quality {
+        brotli: args.brotli_quality,
+        deflate: args.deflate_quality,
+        gzip: args.gzip_quality,
+        zstd: args.zstd_quality,
+    };
+    let algs = Algorithms {
+        brotli: args.brotli,
+        deflate: args.deflate,
+        gzip: args.gzip,
+        zstd: args.zstd,
+    };
 
     let algs_enabled = algs.enabled();
     if algs_enabled.is_empty() {
-        eprintln!("Error: no compression algorithms selected");
+        eprintln!("Error: no compression algorithms enabled");
         exit(1);
     }
 
@@ -58,20 +63,20 @@ struct Args {
     path: PathBuf,
 
     /// Enable brotli compression.
-    #[clap(long, action, takes_value = true, default_missing_value = "true")]
-    brotli: Option<bool>,
+    #[clap(long, action, default_missing_value = "true")]
+    brotli: bool,
 
     /// Enable deflate compression.
-    #[clap(long, action, takes_value = true, default_missing_value = "true")]
-    deflate: Option<bool>,
+    #[clap(long, action, default_missing_value = "true")]
+    deflate: bool,
 
     /// Enable gzip compression.
-    #[clap(long, action, takes_value = true, default_missing_value = "true")]
-    gzip: Option<bool>,
+    #[clap(long, action, default_missing_value = "true")]
+    gzip: bool,
 
     /// Enable zstd compression.
-    #[clap(long, action, takes_value = true, default_missing_value = "true")]
-    zstd: Option<bool>,
+    #[clap(long, action, default_missing_value = "true")]
+    zstd: bool,
 
     /// Set brotli compression quality.
     #[clap(long, default_value = "11")]
