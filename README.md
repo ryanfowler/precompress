@@ -18,7 +18,7 @@ cargo install precompress
 
 ```
 $ precompress -h
-precompress 0.2.0
+precompress 0.2.1
 Precompress a directory of assets
 
 USAGE:
@@ -28,20 +28,20 @@ ARGS:
     <PATH>    Directory to recursively compress files in
 
 OPTIONS:
-        --brotli <BROTLI>
-            Enable brotli compression [possible values: true, false]
+        --brotli
+            Enable brotli compression
 
         --brotli-quality <BROTLI_QUALITY>
             Set brotli compression quality [default: 11]
 
-        --deflate <DEFLATE>
-            Enable deflate compression [possible values: true, false]
+        --deflate
+            Enable deflate compression
 
         --deflate-quality <DEFLATE_QUALITY>
             Set deflate compression quality [default: 9]
 
-        --gzip <GZIP>
-            Enable gzip compression [possible values: true, false]
+        --gzip
+            Enable gzip compression
 
         --gzip-quality <GZIP_QUALITY>
             Set gzip compression quality [default: 9]
@@ -55,8 +55,8 @@ OPTIONS:
     -V, --version
             Print version information
 
-        --zstd <ZSTD>
-            Enable zstd compression [possible values: true, false]
+        --zstd
+            Enable zstd compression
 
         --zstd-quality <ZSTD_QUALITY>
             Set zstd compression quality [default: 21]
