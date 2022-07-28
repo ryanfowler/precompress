@@ -34,10 +34,10 @@ impl Context {
         Context {
             read_buf: vec![0; buf_size],
             write_buf: vec![0; buf_size],
-            brotli_quality: quality.brotli as i32,
-            deflate_quality: quality.deflate as u32,
-            gzip_quality: quality.gzip as u32,
-            zstd_quality: quality.zstd as i32,
+            brotli_quality: i32::from(quality.brotli),
+            deflate_quality: u32::from(quality.deflate),
+            gzip_quality: u32::from(quality.gzip),
+            zstd_quality: i32::from(quality.zstd),
         }
     }
 

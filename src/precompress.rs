@@ -51,7 +51,7 @@ pub(crate) struct Algorithms {
 }
 
 impl Algorithms {
-    pub(crate) fn enabled(&self) -> Vec<Algorithm> {
+    pub(crate) fn collect(self) -> Vec<Algorithm> {
         let mut out = Vec::with_capacity(4);
         if self.brotli {
             out.push(Algorithm::Brotli);
@@ -142,7 +142,7 @@ impl Compressor {
         }
     }
 
-    pub(crate) fn precompress(&self, path: PathBuf) -> Stats {
+    pub(crate) fn precompress(&self, path: &PathBuf) -> Stats {
         let cap = max(self.threads * 2, 64);
         let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
 
@@ -153,8 +153,8 @@ impl Compressor {
             handles.push(spawn(move || Compressor::worker(rx, quality)));
         }
 
-        let enabled = self.algorithms.enabled();
-        let walk = ignore::WalkBuilder::new(&path)
+        let enabled = self.algorithms.collect();
+        let walk = ignore::WalkBuilder::new(path)
             .ignore(false)
             .git_exclude(false)
             .git_global(false)
@@ -173,18 +173,15 @@ impl Compressor {
             if should_compress(path) && !path.is_symlink() && path.is_file() {
                 for alg in &enabled {
                     let path = path.to_path_buf();
-                    tx.send((*alg, path)).expect("unable to send on channel")
+                    tx.send((*alg, path)).expect("unable to send on channel");
                 }
             }
         }
         drop(tx);
 
-        let mut stats = Stats::default();
-        for handle in handles {
-            let h_stats = handle.join().expect("unable to join worker thread");
-            stats = stats + h_stats;
-        }
-        stats
+        handles.into_iter().fold(Stats::default(), |stats, handle| {
+            stats + handle.join().expect("unable to join worker thread")
+        })
     }
 
     fn worker(rx: Receiver<Unit>, quality: Quality) -> Stats {

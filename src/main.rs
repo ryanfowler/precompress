@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::{Duration, Instant};
@@ -33,7 +35,7 @@ fn main() {
         zstd: args.zstd,
     };
 
-    let algs_enabled = algs.enabled();
+    let algs_enabled = algs.collect();
     if algs_enabled.is_empty() {
         eprintln!("Error: no compression algorithms enabled");
         exit(1);
@@ -41,7 +43,7 @@ fn main() {
 
     let cmp = Compressor::new(threads, quality, algs);
     let start = Instant::now();
-    let stats = cmp.precompress(args.path);
+    let stats = cmp.precompress(&args.path);
     let took = start.elapsed();
 
     println!(
