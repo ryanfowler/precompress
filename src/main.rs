@@ -35,8 +35,7 @@ fn main() {
         zstd: args.zstd,
     };
 
-    let algs_enabled = algs.collect();
-    if algs_enabled.is_empty() {
+    if algs.iter().count() == 0 {
         eprintln!("Error: no compression algorithms enabled");
         exit(1);
     }
@@ -52,7 +51,7 @@ fn main() {
         format_duration(took)
     );
     println!("Data compression:");
-    for alg in algs_enabled {
+    for alg in algs.iter() {
         print_alg_savings(alg, &stats);
     }
 }

@@ -8,10 +8,12 @@ use std::{
 
 use anyhow::Result;
 use crossbeam::channel::{bounded, Receiver, Sender};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 use crate::encode::{Context, Quality};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, EnumIter)]
 pub(crate) enum Algorithm {
     Brotli,
     Deflate,
@@ -51,21 +53,17 @@ pub(crate) struct Algorithms {
 }
 
 impl Algorithms {
-    pub(crate) fn collect(self) -> Vec<Algorithm> {
-        let mut out = Vec::with_capacity(4);
-        if self.brotli {
-            out.push(Algorithm::Brotli);
+    pub(crate) fn iter(self) -> impl Iterator<Item = Algorithm> {
+        Algorithm::iter().filter(move |algorithm| self.is_enabled(*algorithm))
+    }
+
+    fn is_enabled(&self, algorithm: Algorithm) -> bool {
+        match algorithm {
+            Algorithm::Brotli => self.brotli,
+            Algorithm::Deflate => self.deflate,
+            Algorithm::Gzip => self.gzip,
+            Algorithm::Zstd => self.zstd,
         }
-        if self.deflate {
-            out.push(Algorithm::Deflate);
-        }
-        if self.gzip {
-            out.push(Algorithm::Gzip);
-        }
-        if self.zstd {
-            out.push(Algorithm::Zstd);
-        }
-        out
     }
 }
 
@@ -153,7 +151,6 @@ impl Compressor {
             handles.push(spawn(move || Compressor::worker(rx, quality)));
         }
 
-        let enabled = self.algorithms.collect();
         let walk = ignore::WalkBuilder::new(path)
             .ignore(false)
             .git_exclude(false)
@@ -171,9 +168,9 @@ impl Compressor {
             };
             let path = entry.path();
             if should_compress(path) && !path.is_symlink() && path.is_file() {
-                for alg in &enabled {
+                for alg in self.algorithms.iter() {
                     let path = path.to_path_buf();
-                    tx.send((*alg, path)).expect("unable to send on channel");
+                    tx.send((alg, path)).expect("unable to send on channel");
                 }
             }
         }
