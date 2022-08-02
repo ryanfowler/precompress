@@ -42,7 +42,8 @@ fn main() {
 
     let cmp = Compressor::new(threads, quality, algs);
     let start = Instant::now();
-    let stats = cmp.precompress(&args.path);
+    cmp.precompress(&args.path);
+    let stats = cmp.finish();
     let took = start.elapsed();
 
     println!(

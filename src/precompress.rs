@@ -1,8 +1,9 @@
 use std::{
     cmp::max,
     fs::File,
+    mem::take,
     path::{Path, PathBuf},
-    thread::spawn,
+    thread::{spawn, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -124,8 +125,8 @@ impl std::ops::Add<AlgStat> for AlgStat {
 }
 
 pub(crate) struct Compressor {
-    threads: usize,
-    quality: Quality,
+    tx: Sender<Unit>,
+    handles: Vec<JoinHandle<Stats>>,
     algorithms: Algorithms,
 }
 
@@ -133,24 +134,24 @@ type Unit = (Algorithm, PathBuf);
 
 impl Compressor {
     pub(crate) fn new(threads: usize, quality: Quality, algorithms: Algorithms) -> Self {
+        let cap = max(threads * 2, 128);
+        let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
+
+        let handles = (0..threads)
+            .map(|_| {
+                let rx = rx.clone();
+                spawn(move || Compressor::worker(rx, quality))
+            })
+            .collect();
+
         Compressor {
-            threads,
-            quality,
+            tx,
+            handles,
             algorithms,
         }
     }
 
-    pub(crate) fn precompress(&self, path: &PathBuf) -> Stats {
-        let cap = max(self.threads * 2, 64);
-        let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
-
-        let quality = self.quality;
-        let mut handles = Vec::with_capacity(self.threads);
-        for _ in 0..self.threads {
-            let rx = rx.clone();
-            handles.push(spawn(move || Compressor::worker(rx, quality)));
-        }
-
+    pub(crate) fn precompress(&self, path: &PathBuf) {
         let walk = ignore::WalkBuilder::new(path)
             .ignore(false)
             .git_exclude(false)
@@ -170,11 +171,17 @@ impl Compressor {
             if should_compress(path) && !path.is_symlink() && path.is_file() {
                 for alg in self.algorithms.iter() {
                     let path = path.to_path_buf();
-                    tx.send((alg, path)).expect("unable to send on channel");
+                    self.tx
+                        .send((alg, path))
+                        .expect("unable to send on channel");
                 }
             }
         }
-        drop(tx);
+    }
+
+    pub(crate) fn finish(mut self) -> Stats {
+        let handles = take(&mut self.handles);
+        drop(self);
 
         handles.into_iter().fold(Stats::default(), |stats, handle| {
             stats + handle.join().expect("unable to join worker thread")
@@ -230,9 +237,8 @@ impl Compressor {
 
         let mut file_name = match path.file_name() {
             None => return Ok((0, 0)),
-            Some(name) => name,
-        }
-        .to_os_string();
+            Some(name) => name.to_os_string(),
+        };
         file_name.push(alg.extension());
         let dst_path = path.with_file_name(file_name);
 
