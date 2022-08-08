@@ -29,7 +29,7 @@ flate2 = { version = "1.0.24" }
 ignore = { version = "0.4.18" }
 jemallocator = { version = "0.5.0" }
 num_cpus = { version = "1.13" }
-phf = { version = "0.11.0", features = ["macros"] }
+phf = { version = "0.11.1", features = ["macros"] }
 strum = { version = "0.24.1" }
 strum_macros = { version = "0.24.3" }
 zstd = { version = "0.11.2" }
