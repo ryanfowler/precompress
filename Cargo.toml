@@ -21,7 +21,7 @@ opt-level = 3
 strip = "debuginfo"
 
 [dependencies]
-anyhow = { version = "1.0.64" }
+anyhow = { version = "1.0.65" }
 brotli = { version = "3.3.4" }
 clap = { version = "3.2", features = ["derive"] }
 crossbeam = { version = "0.8.1" }
