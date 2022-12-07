@@ -32,4 +32,4 @@ num_cpus = { version = "1.14" }
 phf = { version = "0.11.1", features = ["macros"] }
 strum = { version = "0.24.1" }
 strum_macros = { version = "0.24.3" }
-zstd = { version = "0.12.0" }
+zstd = { version = "0.12.1" }
