@@ -18,48 +18,36 @@ cargo install precompress
 
 ```
 $ precompress -h
-precompress 0.2.1
 Precompress a directory of assets
 
-USAGE:
-    precompress [OPTIONS] <PATH>
+Usage: precompress [OPTIONS] <PATH>
 
-ARGS:
-    <PATH>    Directory to recursively compress files in
+Arguments:
+  <PATH>  Directory to recursively compress files in
 
-OPTIONS:
-        --brotli
-            Enable brotli compression
-
-        --brotli-quality <BROTLI_QUALITY>
-            Set brotli compression quality [default: 11]
-
-        --deflate
-            Enable deflate compression
-
-        --deflate-quality <DEFLATE_QUALITY>
-            Set deflate compression quality [default: 9]
-
-        --gzip
-            Enable gzip compression
-
-        --gzip-quality <GZIP_QUALITY>
-            Set gzip compression quality [default: 9]
-
-    -h, --help
-            Print help information
-
-    -t, --threads <THREADS>
-            Number of threads to use; "0" uses the number of cpus [default: 0]
-
-    -V, --version
-            Print version information
-
-        --zstd
-            Enable zstd compression
-
-        --zstd-quality <ZSTD_QUALITY>
-            Set zstd compression quality [default: 21]
+Options:
+      --brotli
+          Enable brotli compression
+      --deflate
+          Enable deflate compression
+      --gzip
+          Enable gzip compression
+      --zstd
+          Enable zstd compression
+      --brotli-quality <BROTLI_QUALITY>
+          Set brotli compression quality [default: 11]
+      --deflate-quality <DEFLATE_QUALITY>
+          Set deflate compression quality [default: 9]
+      --gzip-quality <GZIP_QUALITY>
+          Set gzip compression quality [default: 9]
+      --zstd-quality <ZSTD_QUALITY>
+          Set zstd compression quality [default: 21]
+  -t, --threads <THREADS>
+          Number of threads to use; "0" uses the number of cpus [default: 0]
+  -h, --help
+          Print help information
+  -V, --version
+          Print version information
 ```
 
 ### Example
