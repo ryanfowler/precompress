@@ -4,10 +4,8 @@ updates:
   directory: "/"
   schedule:
     interval: daily
-    time: "10:00"
+    time: "06:00"
+    timezone: "America/Vancouver"
   open-pull-requests-limit: 10
   reviewers:
   - ryanfowler
-  allow:
-  - dependency-type: direct
-  - dependency-type: indirect
