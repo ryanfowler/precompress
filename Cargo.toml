@@ -25,7 +25,7 @@ anyhow = { version = "1.0.71" }
 brotli = { version = "3.3.4" }
 clap = { version = "4.2", features = ["derive"] }
 crossbeam = { version = "0.8.1" }
-flate2 = { version = "1.0.25" }
+flate2 = { version = "1.0.26" }
 ignore = { version = "0.4.20" }
 jemallocator = { version = "0.5.0" }
 num_cpus = { version = "1.15" }
