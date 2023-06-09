@@ -10,25 +10,25 @@ license = "MIT"
 edition = "2021"
 
 [[bin]]
-path = "src/main.rs"
 name = "precompress"
+path = "src/main.rs"
 
 [profile.release]
 codegen-units = 1
 debug = false
-lto = "fat"
+lto = true
 opt-level = 3
-strip = "debuginfo"
+strip = true
 
 [dependencies]
 anyhow = { version = "1.0.71" }
 brotli = { version = "3.3.4" }
-clap = { version = "4.3", features = ["derive"] }
+clap = { version = "4.3.2", features = ["derive"] }
 crossbeam = { version = "0.8.1" }
 flate2 = { version = "1.0.26" }
 ignore = { version = "0.4.20" }
 jemallocator = { version = "0.5.0" }
-num_cpus = { version = "1.15" }
+num_cpus = { version = "1.15.0" }
 phf = { version = "0.11.1", features = ["macros"] }
 strum = { version = "0.24.1" }
 strum_macros = { version = "0.24.3" }
