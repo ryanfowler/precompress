@@ -24,6 +24,7 @@ jobs:
           - linux-x86_64-musl
           - macos-arm64
           - macos-x86_64
+          - windows-x86_64-msvc
         include:
           - build: linux-arm64-gnu
             os: ubuntu-22.04
@@ -43,6 +44,9 @@ jobs:
           - build: macos-arm64
             os: macos-12
             target: aarch64-apple-darwin
+          - build: windows-x86_64-msvc
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v3
 
@@ -53,7 +57,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Install cross
-        if: ${{ matrix.os != 'macos-12' }}
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
         run: |
           cargo install cross
           echo CARGO=cross >> $GITHUB_ENV
@@ -62,12 +66,22 @@ jobs:
         run: ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
 
       - name: Build archive
+        if: ${{ matrix.os != 'windows-2022' }}
         shell: bash
         run: |
           staging="precompress-${{ github.ref_name }}-${{ matrix.target }}"
           cp "target/${{ matrix.target }}/release/precompress" precompress
           tar czf "$staging.tar.gz" precompress
           echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+
+      - name: Build archive
+        if: ${{ matrix.os == 'windows-2022' }}
+        shell: bash
+        run: |
+          staging="precompress-${{ github.ref_name }}-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/precompress.exe" precompress.exe
+          7z a "$staging.zip" precompress
+          echo "ASSET=$staging.zip" >> $GITHUB_ENV
 
       - name: Upload release archive
         env:
