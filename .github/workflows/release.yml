@@ -80,7 +80,7 @@ jobs:
         run: |
           staging="precompress-${{ github.ref_name }}-${{ matrix.target }}"
           cp "target/${{ matrix.target }}/release/precompress.exe" precompress.exe
-          7z a "$staging.zip" precompress
+          7z a "$staging.zip" precompress.exe
           echo "ASSET=$staging.zip" >> $GITHUB_ENV
 
       - name: Upload release archive
