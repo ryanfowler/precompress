@@ -13,6 +13,7 @@ use crate::precompress::{Algorithms, Compressor, Stats};
 mod encode;
 mod precompress;
 
+#[cfg(not(target_os = "windows"))]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
