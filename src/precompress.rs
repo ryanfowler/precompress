@@ -151,7 +151,7 @@ impl Compressor {
         }
     }
 
-    pub(crate) fn precompress(&self, path: &PathBuf) {
+    pub(crate) fn precompress(&self, path: &Path) {
         let walk = ignore::WalkBuilder::new(path)
             .ignore(false)
             .git_exclude(false)
@@ -231,7 +231,7 @@ impl Compressor {
         stats
     }
 
-    fn encode_file(ctx: &mut Context, alg: Algorithm, path: &PathBuf) -> Result<(u64, u64)> {
+    fn encode_file(ctx: &mut Context, alg: Algorithm, path: &Path) -> Result<(u64, u64)> {
         let mut src = File::open(path)?;
         let src_size = src.metadata()?.len();
 
