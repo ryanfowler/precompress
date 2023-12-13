@@ -26,30 +26,14 @@ Arguments:
   <PATH>  Directory to recursively compress files in
 
 Options:
-      --brotli
-          Enable brotli compression
-      --deflate
-          Enable deflate compression
-      --gzip
-          Enable gzip compression
-      --zstd
-          Enable zstd compression
-      --brotli-quality <BROTLI_QUALITY>
-          Set brotli compression quality [default: 11]
-      --deflate-quality <DEFLATE_QUALITY>
-          Set deflate compression quality [default: 9]
-      --gzip-quality <GZIP_QUALITY>
-          Set gzip compression quality [default: 9]
-      --zstd-quality <ZSTD_QUALITY>
-          Set zstd compression quality [default: 21]
-      --min-size <MIN_SIZE>
-          Set the minimum size of files to be compressed in bytes [default: 1024]
-  -t, --threads <THREADS>
-          Number of threads to use; "0" uses the number of cpus [default: 0]
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+      --brotli [<QUALITY>]   Enable brotli compression with optional quality [default: 11]
+      --deflate [<QUALITY>]  Enable deflate compression with optional quality [default: 9]
+      --gzip [<QUALITY>]     Enable gzip compression with optional quality [default: 9]
+      --zstd [<QUALITY>]     Enable zstd compression with optional quality [default: 21]
+      --min-size <MIN_SIZE>  Set the minimum size of files to be compressed in bytes [default: 1024]
+  -t, --threads <THREADS>    Number of threads to use; "0" uses the number of cpus [default: 0]
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
 
 ### Example
@@ -57,7 +41,7 @@ Options:
 Precompress the files in the current directory using brotli and gzip:
 
 ```
-precompress --brotli --gzip .
+precompress . --brotli --gzip
 ```
 
 ## TODO
