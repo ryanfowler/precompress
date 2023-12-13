@@ -17,7 +17,7 @@ cargo install precompress
 ## Usage
 
 ```
-$ precompress -h
+> precompress --help
 Precompress a directory of assets
 
 Usage: precompress [OPTIONS] <PATH>
@@ -42,26 +42,27 @@ Options:
           Set gzip compression quality [default: 9]
       --zstd-quality <ZSTD_QUALITY>
           Set zstd compression quality [default: 21]
+      --min-size <MIN_SIZE>
+          Set the minimum size of files to be compressed in bytes [default: 1024]
   -t, --threads <THREADS>
           Number of threads to use; "0" uses the number of cpus [default: 0]
   -h, --help
-          Print help information
+          Print help
   -V, --version
-          Print version information
+          Print version
 ```
 
 ### Example
 
-Precompress the files in the current directory using brotli, gzip, and zstd:
+Precompress the files in the current directory using brotli and gzip:
 
 ```
-precompress . --brotli --gzip --zstd
+precompress --brotli --gzip .
 ```
 
 ## TODO
 
 - allow custom include/exclude globs
-- add minimum file size constraint
 
 ## License
 

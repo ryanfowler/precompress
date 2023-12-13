@@ -133,14 +133,19 @@ pub(crate) struct Compressor {
 type Unit = (Algorithm, PathBuf);
 
 impl Compressor {
-    pub(crate) fn new(threads: usize, quality: Quality, algorithms: Algorithms) -> Self {
+    pub(crate) fn new(
+        threads: usize,
+        min_size: u64,
+        quality: Quality,
+        algorithms: Algorithms,
+    ) -> Self {
         let cap = max(threads * 2, 128);
         let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
 
         let handles = (0..threads)
             .map(|_| {
                 let rx = rx.clone();
-                spawn(move || Compressor::worker(rx, quality))
+                spawn(move || Compressor::worker(rx, min_size, quality))
             })
             .collect();
 
@@ -188,18 +193,18 @@ impl Compressor {
         })
     }
 
-    fn worker(rx: Receiver<Unit>, quality: Quality) -> Stats {
+    fn worker(rx: Receiver<Unit>, min_size: u64, quality: Quality) -> Stats {
         let mut stats = Stats::default();
         let mut ctx = Context::new(1 << 14, quality);
 
         while let Ok((algorithm, pathbuf)) = rx.recv() {
             let start = Instant::now();
-            match Compressor::encode_file(&mut ctx, algorithm, &pathbuf) {
+            match Compressor::encode_file(&mut ctx, min_size, algorithm, &pathbuf) {
                 Err(err) => {
                     eprintln!("Warning: {}: {}", pathbuf.display(), err);
                     stats.num_errors += 1;
                 }
-                Ok((src, dst)) => {
+                Ok(Some((src, dst))) => {
                     let dur = start.elapsed();
                     match algorithm {
                         Algorithm::Brotli => {
@@ -225,18 +230,27 @@ impl Compressor {
                     }
                     stats.num_files += 1;
                 }
+                Ok(None) => {}
             }
         }
 
         stats
     }
 
-    fn encode_file(ctx: &mut Context, alg: Algorithm, path: &Path) -> Result<(u64, u64)> {
+    fn encode_file(
+        ctx: &mut Context,
+        min_size: u64,
+        alg: Algorithm,
+        path: &Path,
+    ) -> Result<Option<(u64, u64)>> {
         let mut src = File::open(path)?;
         let src_size = src.metadata()?.len();
+        if src_size < min_size {
+            return Ok(None);
+        }
 
         let mut file_name = match path.file_name() {
-            None => return Ok((0, 0)),
+            None => return Ok(None),
             Some(name) => name.to_os_string(),
         };
         file_name.push(alg.extension());
@@ -250,7 +264,7 @@ impl Compressor {
             Algorithm::Zstd => ctx.write_zstd(&mut src, &mut dst)?,
         };
         let dst_size = dst.metadata()?.len();
-        Ok((src_size, dst_size))
+        Ok(Some((src_size, dst_size)))
     }
 }
 
