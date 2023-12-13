@@ -41,7 +41,7 @@ fn main() {
         exit(1);
     }
 
-    let cmp = Compressor::new(threads, quality, algs);
+    let cmp = Compressor::new(threads, args.min_size, quality, algs);
     let start = Instant::now();
     cmp.precompress(&args.path);
     let stats = cmp.finish();
@@ -96,6 +96,10 @@ struct Args {
     /// Set zstd compression quality.
     #[clap(long, default_value = "21")]
     zstd_quality: u8,
+
+    /// Set the minimum size of files to be compressed in bytes.
+    #[clap(long, default_value = "1024")]
+    min_size: u64,
 
     /// Number of threads to use; "0" uses the number of cpus.
     #[clap(short, long, default_value = "0")]
