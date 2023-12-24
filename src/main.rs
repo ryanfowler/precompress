@@ -24,16 +24,16 @@ fn main() {
         t => t,
     };
     let quality = Quality {
-        brotli: args.brotli_quality,
-        deflate: args.deflate_quality,
-        gzip: args.gzip_quality,
-        zstd: args.zstd_quality,
+        brotli: args.brotli.unwrap_or(None).unwrap_or(11),
+        deflate: args.deflate.unwrap_or(None).unwrap_or(9),
+        gzip: args.gzip.unwrap_or(None).unwrap_or(9),
+        zstd: args.zstd.unwrap_or(None).unwrap_or(21),
     };
     let algs = Algorithms {
-        brotli: args.brotli,
-        deflate: args.deflate,
-        gzip: args.gzip,
-        zstd: args.zstd,
+        brotli: args.brotli.is_some(),
+        deflate: args.deflate.is_some(),
+        gzip: args.gzip.is_some(),
+        zstd: args.zstd.is_some(),
     };
 
     if algs.iter().count() == 0 {
@@ -65,37 +65,21 @@ struct Args {
     /// Directory to recursively compress files in.
     path: PathBuf,
 
-    /// Enable brotli compression.
-    #[clap(long, action, default_missing_value = "true")]
-    brotli: bool,
+    /// Enable brotli compression with optional quality [default: 11]
+    #[clap(long, value_name = "QUALITY")]
+    brotli: Option<Option<u8>>,
 
-    /// Enable deflate compression.
-    #[clap(long, action, default_missing_value = "true")]
-    deflate: bool,
+    /// Enable deflate compression with optional quality [default: 9]
+    #[clap(long, value_name = "QUALITY")]
+    deflate: Option<Option<u8>>,
 
-    /// Enable gzip compression.
-    #[clap(long, action, default_missing_value = "true")]
-    gzip: bool,
+    /// Enable gzip compression with optional quality [default: 9]
+    #[clap(long, value_name = "QUALITY")]
+    gzip: Option<Option<u8>>,
 
-    /// Enable zstd compression.
-    #[clap(long, action, default_missing_value = "true")]
-    zstd: bool,
-
-    /// Set brotli compression quality.
-    #[clap(long, default_value = "11")]
-    brotli_quality: u8,
-
-    /// Set deflate compression quality.
-    #[clap(long, default_value = "9")]
-    deflate_quality: u8,
-
-    /// Set gzip compression quality.
-    #[clap(long, default_value = "9")]
-    gzip_quality: u8,
-
-    /// Set zstd compression quality.
-    #[clap(long, default_value = "21")]
-    zstd_quality: u8,
+    /// Enable zstd compression with optional quality [default: 21]
+    #[clap(long, value_name = "QUALITY")]
+    zstd: Option<Option<u8>>,
 
     /// Set the minimum size of files to be compressed in bytes.
     #[clap(long, default_value = "1024")]
