@@ -22,7 +22,7 @@ strip = true
 
 [dependencies]
 anyhow = { version = "1.0.81" }
-brotli = { version = "3.5.0" }
+brotli = { version = "4.0.0" }
 clap = { version = "4.5.4", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
 flate2 = { version = "1.0.28" }
