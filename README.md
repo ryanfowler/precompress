@@ -26,43 +26,56 @@ Arguments:
   <PATH>  Directory to recursively compress files in
 
 Options:
-      --brotli
-          Enable brotli compression
-      --deflate
-          Enable deflate compression
-      --gzip
-          Enable gzip compression
-      --zstd
-          Enable zstd compression
-      --brotli-quality <BROTLI_QUALITY>
-          Set brotli compression quality [default: 11]
-      --deflate-quality <DEFLATE_QUALITY>
-          Set deflate compression quality [default: 9]
-      --gzip-quality <GZIP_QUALITY>
-          Set gzip compression quality [default: 9]
-      --zstd-quality <ZSTD_QUALITY>
-          Set zstd compression quality [default: 21]
-      --min-size <MIN_SIZE>
-          Set the minimum size of files to be compressed in bytes [default: 1024]
-  -t, --threads <THREADS>
-          Number of threads to use; "0" uses the number of cpus [default: 0]
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+  -c, --compression <COMPRESSION>  Compression algorithms to use
+  -e, --extensions <EXTENSIONS>    Extensions of files that should be compressed
+  -m, --min-size <MIN_SIZE>        Set the minimum size of files to be compressed in bytes [default: 1024]
+  -t, --threads <THREADS>          Number of threads to use; "0" uses the number of cpus [default: 0]
+  -h, --help                       Print help
+  -V, --version                    Print version
+```
+
+By default, all compression algorithms are enabled. To specify the specific
+types of compression you want to enable, you can use the `-c` flag with the
+values:
+
+- `br` or `brotli`
+- `de` or `deflate`
+- `gz` or `gzip`
+- `zstd`
+
+The compression quality can be specified by adding the value after a colon:
+
+```
+precompress -c gzip:5 .
+```
+
+There are number of file extensions that are compressed by default. To sepcify
+the specific extensions to compress, you can use the `-e` flag like so:
+
+```
+precompress -e css -e json -e html .
+```
+
+or
+
+```
+precompress -e css,json,html .
 ```
 
 ### Example
 
-Precompress the files in the current directory using brotli and gzip:
+Precompress the html files in the current directory using brotli and gzip with
+a quality of 5, and a minimum file size of 4096:
 
 ```
-precompress --brotli --gzip .
+precompress -c br:5,gz:5 -e html -m 4096 .
 ```
 
-## TODO
+or
 
-- allow custom include/exclude globs
+```
+precompress -c br:5 -c gz:5 -e html -m 4096 .
+```
 
 ## License
 
