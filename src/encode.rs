@@ -11,12 +11,23 @@ use flate2::{
 };
 use zstd::Encoder;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Quality {
     pub(crate) brotli: u8,
     pub(crate) deflate: u8,
     pub(crate) gzip: u8,
     pub(crate) zstd: u8,
+}
+
+impl Default for Quality {
+    fn default() -> Self {
+        Quality {
+            brotli: 11,
+            deflate: 9,
+            gzip: 9,
+            zstd: 21,
+        }
+    }
 }
 
 pub(crate) struct Context {

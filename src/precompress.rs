@@ -45,7 +45,7 @@ impl Algorithm {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct Algorithms {
     pub(crate) brotli: bool,
     pub(crate) deflate: bool,
@@ -54,6 +54,15 @@ pub(crate) struct Algorithms {
 }
 
 impl Algorithms {
+    pub(crate) fn all_enabled() -> Self {
+        Self {
+            brotli: true,
+            deflate: true,
+            gzip: true,
+            zstd: true,
+        }
+    }
+
     pub(crate) fn iter(self) -> impl Iterator<Item = Algorithm> {
         Algorithm::iter().filter(move |algorithm| self.is_enabled(*algorithm))
     }
@@ -128,6 +137,7 @@ pub(crate) struct Compressor {
     tx: Sender<Unit>,
     handles: Vec<JoinHandle<Stats>>,
     algorithms: Algorithms,
+    extensions: Option<Vec<String>>,
 }
 
 type Unit = (Algorithm, PathBuf);
@@ -138,6 +148,7 @@ impl Compressor {
         min_size: u64,
         quality: Quality,
         algorithms: Algorithms,
+        extensions: Option<Vec<String>>,
     ) -> Self {
         let cap = max(threads * 2, 128);
         let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
@@ -153,6 +164,7 @@ impl Compressor {
             tx,
             handles,
             algorithms,
+            extensions,
         }
     }
 
@@ -173,7 +185,7 @@ impl Compressor {
                 }
             };
             let path = entry.path();
-            if should_compress(path) && !path.is_symlink() && path.is_file() {
+            if self.should_compress(path) && !path.is_symlink() && path.is_file() {
                 for alg in self.algorithms.iter() {
                     let path = path.to_path_buf();
                     self.tx
@@ -206,28 +218,15 @@ impl Compressor {
                 }
                 Ok(Some((src, dst))) => {
                     let dur = start.elapsed();
-                    match algorithm {
-                        Algorithm::Brotli => {
-                            stats.brotli.total_time += dur;
-                            stats.brotli.saved_bytes += (src - dst) as i64;
-                            stats.brotli.total_bytes += dst;
-                        }
-                        Algorithm::Deflate => {
-                            stats.deflate.total_time += dur;
-                            stats.deflate.saved_bytes += (src - dst) as i64;
-                            stats.deflate.total_bytes += dst;
-                        }
-                        Algorithm::Gzip => {
-                            stats.gzip.total_time += dur;
-                            stats.gzip.saved_bytes += (src - dst) as i64;
-                            stats.gzip.total_bytes += dst;
-                        }
-                        Algorithm::Zstd => {
-                            stats.zstd.total_time += dur;
-                            stats.zstd.saved_bytes += (src - dst) as i64;
-                            stats.zstd.total_bytes += dst;
-                        }
-                    }
+                    let s = match algorithm {
+                        Algorithm::Brotli => &mut stats.brotli,
+                        Algorithm::Deflate => &mut stats.deflate,
+                        Algorithm::Gzip => &mut stats.gzip,
+                        Algorithm::Zstd => &mut stats.zstd,
+                    };
+                    s.total_time += dur;
+                    s.saved_bytes += (src - dst) as i64;
+                    s.total_bytes += dst;
                     stats.num_files += 1;
                 }
                 Ok(None) => {}
@@ -266,15 +265,19 @@ impl Compressor {
         let dst_size = dst.metadata()?.len();
         Ok(Some((src_size, dst_size)))
     }
-}
 
-fn should_compress(path: &Path) -> bool {
-    if let Some(ext) = path.extension() {
-        if let Some(ext) = ext.to_str() {
-            return EXTENSIONS.contains(ext);
+    fn should_compress(&self, path: &Path) -> bool {
+        if let Some(ext) = path.extension() {
+            if let Some(ext) = ext.to_str() {
+                return if let Some(exts) = &self.extensions {
+                    exts.iter().any(|v| v == ext)
+                } else {
+                    EXTENSIONS.contains(ext)
+                };
+            }
         }
+        false
     }
-    false
 }
 
 static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {

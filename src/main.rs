@@ -23,25 +23,21 @@ fn main() {
         0 => num_cpus::get(),
         t => t,
     };
-    let quality = Quality {
-        brotli: args.brotli_quality,
-        deflate: args.deflate_quality,
-        gzip: args.gzip_quality,
-        zstd: args.zstd_quality,
-    };
-    let algs = Algorithms {
-        brotli: args.brotli,
-        deflate: args.deflate,
-        gzip: args.gzip,
-        zstd: args.zstd,
-    };
+
+    let (algs, quality) = parse_compression(args.compression);
 
     if algs.iter().count() == 0 {
         eprintln!("Error: no compression algorithms enabled");
         exit(1);
     }
 
-    let cmp = Compressor::new(threads, args.min_size, quality, algs);
+    let exts = args.extensions.map(|v| {
+        v.into_iter()
+            .flat_map(|s| s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
+            .collect::<Vec<String>>()
+    });
+
+    let cmp = Compressor::new(threads, args.min_size, quality, algs, exts);
     let start = Instant::now();
     cmp.precompress(&args.path);
     let stats = cmp.finish();
@@ -65,40 +61,16 @@ struct Args {
     /// Directory to recursively compress files in.
     path: PathBuf,
 
-    /// Enable brotli compression.
-    #[clap(long, action, default_missing_value = "true")]
-    brotli: bool,
+    /// Compression algorithms to use.
+    #[clap(short, long)]
+    compression: Option<Vec<String>>,
 
-    /// Enable deflate compression.
-    #[clap(long, action, default_missing_value = "true")]
-    deflate: bool,
-
-    /// Enable gzip compression.
-    #[clap(long, action, default_missing_value = "true")]
-    gzip: bool,
-
-    /// Enable zstd compression.
-    #[clap(long, action, default_missing_value = "true")]
-    zstd: bool,
-
-    /// Set brotli compression quality.
-    #[clap(long, default_value = "11")]
-    brotli_quality: u8,
-
-    /// Set deflate compression quality.
-    #[clap(long, default_value = "9")]
-    deflate_quality: u8,
-
-    /// Set gzip compression quality.
-    #[clap(long, default_value = "9")]
-    gzip_quality: u8,
-
-    /// Set zstd compression quality.
-    #[clap(long, default_value = "21")]
-    zstd_quality: u8,
+    /// Extensions of files that should be compressed.
+    #[clap(short, long)]
+    extensions: Option<Vec<String>>,
 
     /// Set the minimum size of files to be compressed in bytes.
-    #[clap(long, default_value = "1024")]
+    #[clap(short, long, default_value = "1024")]
     min_size: u64,
 
     /// Number of threads to use; "0" uses the number of cpus.
@@ -106,13 +78,73 @@ struct Args {
     threads: usize,
 }
 
+fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) {
+    let mut quality = Quality::default();
+
+    let algs = compression
+        .map(|v| {
+            let raw = v
+                .into_iter()
+                .flat_map(|s| s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>());
+            let mut algs = Algorithms::default();
+            for s in raw {
+                let (c, q) = if let Some((c, q)) = s.split_once(':') {
+                    let q: u8 = match q.parse() {
+                        Ok(q) => q,
+                        Err(_) => {
+                            eprintln!("Error: invalid compression quality: {}", q);
+                            exit(1);
+                        }
+                    };
+                    (c, Some(q))
+                } else {
+                    (s.as_ref(), None)
+                };
+
+                match c {
+                    "br" | "brotli" => {
+                        algs.brotli = true;
+                        if let Some(q) = q {
+                            quality.brotli = q;
+                        }
+                    }
+                    "de" | "deflate" => {
+                        algs.deflate = true;
+                        if let Some(q) = q {
+                            quality.deflate = q;
+                        }
+                    }
+                    "gz" | "gzip" => {
+                        algs.gzip = true;
+                        if let Some(q) = q {
+                            quality.gzip = q;
+                        }
+                    }
+                    "zstd" => {
+                        algs.zstd = true;
+                        if let Some(q) = q {
+                            quality.zstd = q;
+                        }
+                    }
+                    _ => {
+                        eprintln!("Error: unknown compression algorithm: {}", s);
+                        exit(1);
+                    }
+                }
+            }
+            algs
+        })
+        .unwrap_or_else(Algorithms::all_enabled);
+
+    (algs, quality)
+}
+
 fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     let stat = stats.for_algorithm(alg);
     println!(
-        "  {}: {}% ({} cpu time)",
+        "  {}: {}%",
         alg,
         calc_savings(stat.saved_bytes, stat.total_bytes),
-        format_duration(stat.total_time),
     );
 }
 
