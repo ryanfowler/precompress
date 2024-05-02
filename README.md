@@ -14,6 +14,8 @@ Using `cargo`:
 cargo install precompress
 ```
 
+Or download a binary from the [latest release](https://github.com/ryanfowler/precompress/releases).
+
 ## Usage
 
 ```
