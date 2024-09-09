@@ -26,7 +26,7 @@ brotli = { version = "6.0.0" }
 clap = { version = "4.5.17", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
 flate2 = { version = "1.0.33" }
-ignore = { version = "0.4.22" }
+ignore = { version = "0.4.23" }
 num_cpus = { version = "1.16.0" }
 phf = { version = "0.11.2", features = ["macros"] }
 strum = { version = "0.26.3" }
