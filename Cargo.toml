@@ -31,7 +31,7 @@ num_cpus = { version = "1.16.0" }
 phf = { version = "0.11.3", features = ["macros"] }
 strum = { version = "0.27.1" }
 strum_macros = { version = "0.27.1" }
-zstd = { version = "0.13.2" }
+zstd = { version = "0.13.3" }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 jemallocator = { version = "0.5.4" }
