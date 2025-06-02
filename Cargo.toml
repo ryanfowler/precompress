@@ -27,7 +27,7 @@ clap = { version = "4.5.39", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
 flate2 = { version = "1.1.1" }
 ignore = { version = "0.4.23" }
-num_cpus = { version = "1.16.0" }
+num_cpus = { version = "1.17.0" }
 phf = { version = "0.11.3", features = ["macros"] }
 strum = { version = "0.27.1" }
 strum_macros = { version = "0.27.1" }
