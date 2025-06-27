@@ -92,7 +92,7 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
                     let q: u8 = match q.parse() {
                         Ok(q) => q,
                         Err(_) => {
-                            eprintln!("Error: invalid compression quality: {}", q);
+                            eprintln!("Error: invalid compression quality: {q}");
                             exit(1);
                         }
                     };
@@ -127,7 +127,7 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
                         }
                     }
                     _ => {
-                        eprintln!("Error: unknown compression algorithm: {}", s);
+                        eprintln!("Error: unknown compression algorithm: {s}");
                         exit(1);
                     }
                 }
