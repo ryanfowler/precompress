@@ -180,7 +180,7 @@ impl Compressor {
             let entry = match entry {
                 Ok(entry) => entry,
                 Err(err) => {
-                    eprintln!("Warning: {}", err);
+                    eprintln!("Warning: {err}");
                     continue;
                 }
             };
