@@ -27,11 +27,9 @@ clap = { version = "4.5.43", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
 flate2 = { version = "1.1.2" }
 ignore = { version = "0.4.23" }
+mimalloc = { version = "0.1.47" }
 num_cpus = { version = "1.17.0" }
 phf = { version = "0.12.1", features = ["macros"] }
 strum = { version = "0.27.2" }
 strum_macros = { version = "0.27.2" }
 zstd = { version = "0.13.3" }
-
-[target.'cfg(not(target_os = "windows"))'.dependencies]
-jemallocator = { version = "0.5.4" }

@@ -5,6 +5,7 @@ use std::process::exit;
 use std::time::{Duration, Instant};
 
 use clap::Parser;
+use mimalloc::MiMalloc;
 use precompress::Algorithm;
 
 use crate::encode::Quality;
@@ -13,9 +14,8 @@ use crate::precompress::{Algorithms, Compressor, Stats};
 mod encode;
 mod precompress;
 
-#[cfg(not(target_os = "windows"))]
 #[global_allocator]
-static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
     let args = Args::parse();
