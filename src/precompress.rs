@@ -290,6 +290,7 @@ static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {
     "js",
     "json",
     "jsx",
+    "map",
     "md",
     "otf",
     "rss",
