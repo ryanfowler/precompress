@@ -7,7 +7,7 @@ repository = "https://github.com/ryanfowler/precompress"
 categories = ["command-line-utilities"]
 keywords = ["compress", "assets", "brotli", "deflate", "gzip"]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 
 [[bin]]
 name = "precompress"

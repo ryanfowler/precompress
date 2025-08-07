@@ -3,12 +3,12 @@ use std::{
     fs::File,
     mem::take,
     path::{Path, PathBuf},
-    thread::{spawn, JoinHandle},
+    thread::{JoinHandle, spawn},
     time::{Duration, Instant},
 };
 
 use anyhow::Result;
-use crossbeam::channel::{bounded, Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, bounded};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -267,14 +267,14 @@ impl Compressor {
     }
 
     fn should_compress(&self, path: &Path) -> bool {
-        if let Some(ext) = path.extension() {
-            if let Some(ext) = ext.to_str() {
-                return if let Some(exts) = &self.extensions {
-                    exts.iter().any(|v| v == ext)
-                } else {
-                    EXTENSIONS.contains(ext)
-                };
-            }
+        if let Some(ext) = path.extension()
+            && let Some(ext) = ext.to_str()
+        {
+            return if let Some(exts) = &self.extensions {
+                exts.iter().any(|v| v == ext)
+            } else {
+                EXTENSIONS.contains(ext)
+            };
         }
         false
     }
