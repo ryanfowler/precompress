@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::{Read, Result, Write};
 
 use brotli::{
-    enc::{BrotliEncoderParams, StandardAlloc},
     BrotliCompressCustomAlloc,
+    enc::{BrotliEncoderParams, StandardAlloc},
 };
 use flate2::{
-    write::{DeflateEncoder, GzEncoder},
     Compression,
+    write::{DeflateEncoder, GzEncoder},
 };
 use zstd::Encoder;
 
@@ -96,6 +96,9 @@ impl Context {
 
     pub(crate) fn write_zstd(&mut self, input: &mut File, output: &mut File) -> Result<()> {
         let mut enc = Encoder::new(output, self.zstd_quality)?;
+        // Cap the HTTP window at 8 MiB (2^23) for browser support.
+        enc.window_log(23)?;
+        enc.long_distance_matching(false)?;
         loop {
             let n = input.read(&mut self.read_buf)?;
             if n == 0 {
