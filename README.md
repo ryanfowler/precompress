@@ -52,8 +52,9 @@ To specify a different quality, add the value after a colon like so:
 precompress -c gzip:5 .
 ```
 
-There are number of file extensions that are compressed by default. To sepcify
-the specific extensions to compress, you can use the `-e` flag like so:
+There are a number of [file extensions](#default-extensions) that are compressed
+by default. To disable that behaviour, you may specify the specific extensions
+to compress by using the `-e` flag like so:
 
 ```
 precompress -e css -e json -e html .
@@ -78,6 +79,54 @@ or
 
 ```
 precompress -c br:5 -c gz:5 -e html -m 4096 .
+```
+
+## Default Extensions
+
+Files with the following extensions are compressed by default:
+
+```
+atom
+cfg
+component
+conf
+css
+csv
+eot
+geojson
+graphql
+htm
+html
+ico
+java
+js
+json
+jsx
+ldjson
+log
+manifest
+map
+md
+mjs
+otf
+rss
+rtf
+scss
+sfnt
+sitemap
+svg
+text
+ts
+tsv
+tsx
+ttf
+txt
+wasm
+woff
+xhtml
+xml
+yaml
+yml
 ```
 
 ## License
