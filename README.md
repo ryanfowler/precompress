@@ -4,7 +4,25 @@ Precompress a directory of assets
 
 `precompress` will recursively compress all suitable assets in a given directory,
 creating (or replacing) compressed versions of the original files using the
-appropriate extension type (e.g. gzip: `index.html` -> `index.html.gz`).
+appropriate extension type.
+
+For example:
+
+```
+dir/
+ └── index.html
+```
+
+would become:
+
+```
+dir/
+ ├── index.html
+ ├── index.html.br
+ ├── index.html.gz
+ ├── index.html.zst
+ └── index.html.zz
+```
 
 ## Installation
 
