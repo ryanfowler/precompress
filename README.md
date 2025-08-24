@@ -43,9 +43,10 @@ values:
 - `br` or `brotli`
 - `de` or `deflate`
 - `gz` or `gzip`
-- `zstd`
+- `zst` or `zstd`
 
-The compression quality can be specified by adding the value after a colon:
+By default, the highest supported compression quality is used for each algorithm.
+To specify a different quality, add the value after a colon like so:
 
 ```
 precompress -c gzip:5 .

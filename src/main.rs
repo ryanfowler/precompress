@@ -120,7 +120,7 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
                             quality.gzip = q;
                         }
                     }
-                    "zstd" => {
+                    "zst" | "zstd" => {
                         algs.zstd = true;
                         if let Some(q) = q {
                             quality.zstd = q;
