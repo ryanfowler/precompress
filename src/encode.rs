@@ -11,21 +11,62 @@ use flate2::{
 };
 use zstd::Encoder;
 
+use crate::precompress::Algorithm;
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Quality {
-    pub(crate) brotli: u8,
-    pub(crate) deflate: u8,
-    pub(crate) gzip: u8,
-    pub(crate) zstd: u8,
+    pub(crate) brotli: i8,
+    pub(crate) deflate: i8,
+    pub(crate) gzip: i8,
+    pub(crate) zstd: i8,
 }
 
 impl Default for Quality {
     fn default() -> Self {
         Quality {
-            brotli: 11,
-            deflate: 9,
-            gzip: 9,
-            zstd: 21,
+            brotli: 10,
+            deflate: 7,
+            gzip: 7,
+            zstd: 19,
+        }
+    }
+}
+
+impl Quality {
+    pub(crate) fn set(&mut self, algorithm: Algorithm, quality: i8) -> bool {
+        match algorithm {
+            Algorithm::Brotli => {
+                if (0..=11).contains(&quality) {
+                    self.brotli = quality;
+                    true
+                } else {
+                    false
+                }
+            }
+            Algorithm::Deflate => {
+                if (1..=9).contains(&quality) {
+                    self.deflate = quality;
+                    true
+                } else {
+                    false
+                }
+            }
+            Algorithm::Gzip => {
+                if (1..=9).contains(&quality) {
+                    self.gzip = quality;
+                    true
+                } else {
+                    false
+                }
+            }
+            Algorithm::Zstd => {
+                if (-7..=22).contains(&quality) {
+                    self.zstd = quality;
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 }
@@ -45,10 +86,10 @@ impl Context {
         Context {
             read_buf: vec![0; buf_size],
             write_buf: vec![0; buf_size],
-            brotli_quality: i32::from(quality.brotli),
-            deflate_quality: u32::from(quality.deflate),
-            gzip_quality: u32::from(quality.gzip),
-            zstd_quality: i32::from(quality.zstd),
+            brotli_quality: quality.brotli as i32,
+            deflate_quality: quality.deflate as u32,
+            gzip_quality: quality.gzip as u32,
+            zstd_quality: quality.zstd as i32,
         }
     }
 

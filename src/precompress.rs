@@ -45,7 +45,7 @@ impl Algorithm {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Algorithms {
     pub(crate) brotli: bool,
     pub(crate) deflate: bool,
@@ -53,13 +53,24 @@ pub(crate) struct Algorithms {
     pub(crate) zstd: bool,
 }
 
-impl Algorithms {
-    pub(crate) fn all_enabled() -> Self {
+impl Default for Algorithms {
+    fn default() -> Self {
         Self {
             brotli: true,
-            deflate: true,
+            deflate: false,
             gzip: true,
             zstd: true,
+        }
+    }
+}
+
+impl Algorithms {
+    pub(crate) fn empty() -> Self {
+        Self {
+            brotli: false,
+            deflate: false,
+            gzip: false,
+            zstd: false,
         }
     }
 

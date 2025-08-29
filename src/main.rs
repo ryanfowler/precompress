@@ -86,10 +86,10 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
             let raw = v
                 .into_iter()
                 .flat_map(|s| s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>());
-            let mut algs = Algorithms::default();
+            let mut algs = Algorithms::empty();
             for s in raw {
                 let (c, q) = if let Some((c, q)) = s.split_once(':') {
-                    let q: u8 = match q.parse() {
+                    let q: i8 = match q.parse() {
                         Ok(q) => q,
                         Err(_) => {
                             eprintln!("Error: invalid compression quality: {q}");
@@ -104,26 +104,38 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
                 match c {
                     "br" | "brotli" => {
                         algs.brotli = true;
-                        if let Some(q) = q {
-                            quality.brotli = q;
+                        if let Some(q) = q
+                            && !quality.set(Algorithm::Brotli, q)
+                        {
+                            eprintln!("Error: invalid brotli compression quality: {q}");
+                            exit(1);
                         }
                     }
                     "de" | "deflate" => {
                         algs.deflate = true;
-                        if let Some(q) = q {
-                            quality.deflate = q;
+                        if let Some(q) = q
+                            && !quality.set(Algorithm::Deflate, q)
+                        {
+                            eprintln!("Error: invalid deflate compression quality: {q}");
+                            exit(1);
                         }
                     }
                     "gz" | "gzip" => {
                         algs.gzip = true;
-                        if let Some(q) = q {
-                            quality.gzip = q;
+                        if let Some(q) = q
+                            && !quality.set(Algorithm::Gzip, q)
+                        {
+                            eprintln!("Error: invalid gzip compression quality: {q}");
+                            exit(1);
                         }
                     }
                     "zst" | "zstd" => {
                         algs.zstd = true;
-                        if let Some(q) = q {
-                            quality.zstd = q;
+                        if let Some(q) = q
+                            && !quality.set(Algorithm::Zstd, q)
+                        {
+                            eprintln!("Error: invalid zstd compression quality: {q}");
+                            exit(1);
                         }
                     }
                     _ => {
@@ -134,7 +146,7 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
             }
             algs
         })
-        .unwrap_or_else(Algorithms::all_enabled);
+        .unwrap_or_default();
 
     (algs, quality)
 }
