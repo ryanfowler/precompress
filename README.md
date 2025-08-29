@@ -54,16 +54,24 @@ Options:
   -V, --version                    Print version
 ```
 
-By default, all compression algorithms are enabled. To specify the specific
-types of compression you want to enable, you can use the `-c` flag with the
-values:
+By default, the `brotli`, `gzip`, and `zstd` algorithms are enabled. To specify
+the specific types of compression you want to enable, you can use the `-c` flag
+with the values:
 
 - `br` or `brotli`
 - `de` or `deflate`
 - `gz` or `gzip`
 - `zst` or `zstd`
 
-By default, the highest supported compression quality is used for each algorithm.
+The default compression qualities used per algorithm are:
+
+```
+brotli:  10
+deflate:  7
+gzip:     7
+zstd:    19
+```
+
 To specify a different quality, add the value after a colon like so:
 
 ```
