@@ -20,8 +20,7 @@ dir/
  ├── index.html
  ├── index.html.br
  ├── index.html.gz
- ├── index.html.zst
- └── index.html.zz
+ └── index.html.zst
 ```
 
 ## Installation
