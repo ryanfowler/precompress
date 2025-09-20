@@ -5,7 +5,7 @@ on:
     types: [published]
 
 env:
-  RUST_VERSION: "1.89.0"
+  RUST_VERSION: "1.90.0"
 
 jobs:
   release:
