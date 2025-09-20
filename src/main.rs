@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 use std::process::exit;
+use std::thread::available_parallelism;
 use std::time::{Duration, Instant};
 
 use clap::Parser;
@@ -19,10 +20,10 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
     let args = Args::parse();
-    let threads = match args.threads {
-        0 => num_cpus::get(),
-        t => t,
-    };
+    let mut threads = args.threads;
+    if threads == 0 {
+        threads = available_parallelism().map(|v| v.get()).unwrap_or(1);
+    }
 
     let (algs, quality) = parse_compression(args.compression);
 
