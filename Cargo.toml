@@ -25,7 +25,7 @@ anyhow = { version = "1.0.100" }
 brotli = { version = "8.0.2" }
 clap = { version = "4.5.53", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
-flate2 = { version = "1.1.5" }
+flate2 = { version = "1.1.7" }
 ignore = { version = "0.4.25" }
 mimalloc = { version = "0.1.48" }
 phf = { version = "0.13.1", features = ["macros"] }
