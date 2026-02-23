@@ -30,5 +30,5 @@ ignore = { version = "0.4.25" }
 mimalloc = { version = "0.1.48" }
 phf = { version = "0.13.1", features = ["macros"] }
 strum = { version = "0.28.0" }
-strum_macros = { version = "0.27.2" }
+strum_macros = { version = "0.28.0" }
 zstd = { version = "0.13.3" }
