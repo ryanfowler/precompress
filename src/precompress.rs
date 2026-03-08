@@ -197,12 +197,17 @@ impl Compressor {
             };
             let path = entry.path();
             if self.should_compress(path) && !path.is_symlink() && path.is_file() {
-                for alg in self.algorithms.iter() {
-                    let path = path.to_path_buf();
+                let path = path.to_path_buf();
+                let algs: Vec<_> = self.algorithms.iter().collect();
+                let (last, rest) = algs.split_last().unwrap();
+                for alg in rest {
                     self.tx
-                        .send((alg, path))
+                        .send((*alg, path.clone()))
                         .expect("unable to send on channel");
                 }
+                self.tx
+                    .send((*last, path))
+                    .expect("unable to send on channel");
             }
         }
     }
