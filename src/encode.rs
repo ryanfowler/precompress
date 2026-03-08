@@ -136,6 +136,7 @@ impl Context {
     }
 
     pub(crate) fn write_zstd(&mut self, input: &mut File, output: &mut File) -> Result<()> {
+        let output = BufWriter::new(output, &mut self.write_buf);
         let mut enc = Encoder::new(output, self.zstd_quality)?;
         // Cap the HTTP window at 8 MiB (2^23) for browser support.
         enc.window_log(23)?;
