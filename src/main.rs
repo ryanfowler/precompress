@@ -39,18 +39,18 @@ fn main() {
             .collect::<HashSet<String>>()
     });
 
-    let cmp = Compressor::new(threads, args.min_size, quality, algs, exts);
+    let cmp = Compressor::new(threads, args.min_size, quality, algs, exts, args.verbose);
     let start = Instant::now();
     cmp.precompress(&args.path);
     let stats = cmp.finish();
     let took = start.elapsed();
 
-    println!(
+    eprintln!(
         "Compressed {} files in {}",
         stats.num_files,
         format_duration(took)
     );
-    println!("Data compression:");
+    eprintln!("Data compression:");
     for alg in algs.iter() {
         print_alg_savings(alg, &stats);
     }
@@ -78,6 +78,10 @@ struct Args {
     /// Number of threads to use; "0" uses the number of cpus.
     #[clap(short, long, default_value = "0")]
     threads: usize,
+
+    /// Print per-file compression results.
+    #[clap(short, long)]
+    verbose: bool,
 }
 
 fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) {
@@ -157,7 +161,7 @@ fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     let stat = stats.for_algorithm(alg);
     let saved = stat.saved_bytes;
     let sign = if saved < 0 { "-" } else { "" };
-    println!(
+    eprintln!(
         "  {}: {}% ({}{})",
         alg,
         calc_savings(saved, stat.total_bytes),
@@ -166,14 +170,14 @@ fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     );
 }
 
-fn calc_savings(saved: i64, total: u64) -> u8 {
+pub(crate) fn calc_savings(saved: i64, total: u64) -> u8 {
     if saved == 0 && total == 0 {
         return 0;
     }
     ((saved as f64 / (saved as f64 + total as f64)) * 100.0) as u8
 }
 
-fn format_bytes(bytes: u64) -> String {
+pub(crate) fn format_bytes(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = 1024 * KB;
     const GB: u64 = 1024 * MB;
