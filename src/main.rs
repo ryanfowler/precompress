@@ -155,10 +155,14 @@ fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) 
 
 fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     let stat = stats.for_algorithm(alg);
+    let saved = stat.saved_bytes;
+    let sign = if saved < 0 { "-" } else { "" };
     println!(
-        "  {}: {}%",
+        "  {}: {}% ({}{})",
         alg,
-        calc_savings(stat.saved_bytes, stat.total_bytes),
+        calc_savings(saved, stat.total_bytes),
+        sign,
+        format_bytes(saved.unsigned_abs()),
     );
 }
 
@@ -167,6 +171,21 @@ fn calc_savings(saved: i64, total: u64) -> u8 {
         return 0;
     }
     ((saved as f64 / (saved as f64 + total as f64)) * 100.0) as u8
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * KB;
+    const GB: u64 = 1024 * MB;
+    if bytes >= GB {
+        format!("{:.1} GiB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.1} MiB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.1} KiB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
 }
 
 fn format_duration(dur: Duration) -> String {
