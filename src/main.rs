@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::exit;
 use std::thread::available_parallelism;
@@ -35,7 +36,7 @@ fn main() {
     let exts = args.extensions.map(|v| {
         v.into_iter()
             .flat_map(|s| s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
-            .collect::<Vec<String>>()
+            .collect::<HashSet<String>>()
     });
 
     let cmp = Compressor::new(threads, args.min_size, quality, algs, exts);

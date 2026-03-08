@@ -1,5 +1,6 @@
 use std::{
     cmp::max,
+    collections::HashSet,
     fs::File,
     mem::take,
     path::{Path, PathBuf},
@@ -148,7 +149,7 @@ pub(crate) struct Compressor {
     tx: Sender<Unit>,
     handles: Vec<JoinHandle<Stats>>,
     algorithms: Algorithms,
-    extensions: Option<Vec<String>>,
+    extensions: Option<HashSet<String>>,
 }
 
 type Unit = (Algorithm, PathBuf);
@@ -159,7 +160,7 @@ impl Compressor {
         min_size: u64,
         quality: Quality,
         algorithms: Algorithms,
-        extensions: Option<Vec<String>>,
+        extensions: Option<HashSet<String>>,
     ) -> Self {
         let cap = max(threads * 2, 128);
         let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
@@ -287,7 +288,7 @@ impl Compressor {
             && let Some(ext) = ext.to_str()
         {
             return if let Some(exts) = &self.extensions {
-                exts.iter().any(|v| v == ext)
+                exts.contains(ext)
             } else {
                 EXTENSIONS.contains(ext)
             };
