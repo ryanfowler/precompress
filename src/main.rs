@@ -162,6 +162,9 @@ fn print_alg_savings(alg: Algorithm, stats: &Stats) {
 }
 
 fn calc_savings(saved: i64, total: u64) -> u8 {
+    if saved == 0 && total == 0 {
+        return 0;
+    }
     ((saved as f64 / (saved as f64 + total as f64)) * 100.0) as u8
 }
 
