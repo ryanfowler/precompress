@@ -172,6 +172,6 @@ fn format_duration(dur: Duration) -> String {
     if dur.as_millis() < 1_000 {
         format!("{}ms", dur.as_millis())
     } else {
-        format!("{}s", dur.as_secs())
+        format!("{:.1}s", dur.as_secs_f64())
     }
 }
