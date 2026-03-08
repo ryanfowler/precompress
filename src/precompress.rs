@@ -14,6 +14,7 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 use crate::encode::{Context, Quality};
+use crate::{calc_savings, format_bytes};
 
 #[derive(Debug, Clone, Copy, EnumIter)]
 pub(crate) enum Algorithm {
@@ -150,6 +151,8 @@ pub(crate) struct Compressor {
     handles: Vec<JoinHandle<Stats>>,
     algorithms: Algorithms,
     extensions: Option<HashSet<String>>,
+    #[allow(dead_code)]
+    verbose: bool,
 }
 
 type Unit = (Algorithm, PathBuf);
@@ -161,6 +164,7 @@ impl Compressor {
         quality: Quality,
         algorithms: Algorithms,
         extensions: Option<HashSet<String>>,
+        verbose: bool,
     ) -> Self {
         let cap = max(threads * 2, 128);
         let (tx, rx): (Sender<Unit>, Receiver<Unit>) = bounded(cap);
@@ -168,7 +172,7 @@ impl Compressor {
         let handles = (0..threads)
             .map(|_| {
                 let rx = rx.clone();
-                spawn(move || Compressor::worker(rx, min_size, quality))
+                spawn(move || Compressor::worker(rx, min_size, quality, verbose))
             })
             .collect();
 
@@ -177,6 +181,7 @@ impl Compressor {
             handles,
             algorithms,
             extensions,
+            verbose,
         }
     }
 
@@ -222,7 +227,7 @@ impl Compressor {
         })
     }
 
-    fn worker(rx: Receiver<Unit>, min_size: u64, quality: Quality) -> Stats {
+    fn worker(rx: Receiver<Unit>, min_size: u64, quality: Quality, verbose: bool) -> Stats {
         let mut stats = Stats::default();
         let mut ctx = Context::new(1 << 14, quality);
 
@@ -235,6 +240,18 @@ impl Compressor {
                 }
                 Ok(Some((src, dst))) => {
                     let dur = start.elapsed();
+                    let saved = src as i64 - dst as i64;
+                    if verbose {
+                        let sign = if saved < 0 { "-" } else { "" };
+                        eprintln!(
+                            "{}: {} ({}%, {}{})",
+                            algorithm,
+                            pathbuf.display(),
+                            calc_savings(saved, dst),
+                            sign,
+                            format_bytes(saved.unsigned_abs()),
+                        );
+                    }
                     let s = match algorithm {
                         Algorithm::Brotli => &mut stats.brotli,
                         Algorithm::Deflate => &mut stats.deflate,
@@ -242,7 +259,7 @@ impl Compressor {
                         Algorithm::Zstd => &mut stats.zstd,
                     };
                     s.total_time += dur;
-                    s.saved_bytes += src as i64 - dst as i64;
+                    s.saved_bytes += saved;
                     s.total_bytes += dst;
                     stats.num_files += 1;
                 }
