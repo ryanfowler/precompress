@@ -49,6 +49,7 @@ Options:
   -e, --extensions <EXTENSIONS>    Extensions of files that should be compressed
   -m, --min-size <MIN_SIZE>        Set the minimum size of files to be compressed in bytes [default: 1024]
   -t, --threads <THREADS>          Number of threads to use; "0" uses the number of cpus [default: 0]
+  -v, --verbose                    Print per-file compression results
   -h, --help                       Print help
   -V, --version                    Print version
 ```
