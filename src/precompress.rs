@@ -236,7 +236,7 @@ impl Compressor {
                         Algorithm::Zstd => &mut stats.zstd,
                     };
                     s.total_time += dur;
-                    s.saved_bytes += (src - dst) as i64;
+                    s.saved_bytes += src as i64 - dst as i64;
                     s.total_bytes += dst;
                     stats.num_files += 1;
                 }
