@@ -1,7 +1,8 @@
 use std::{
     cmp::max,
     collections::HashSet,
-    fs::File,
+    fs::{self, File},
+    io,
     mem::take,
     path::{Path, PathBuf},
     thread::{JoinHandle, spawn},
@@ -301,14 +302,12 @@ impl Compressor {
         file_name.push(alg.extension());
         let dst_path = path.with_file_name(file_name);
 
-        let mut dst = File::create(dst_path)?;
-        match alg {
-            Algorithm::Brotli => ctx.write_brotli(&mut src, &mut dst)?,
-            Algorithm::Deflate => ctx.write_deflate(&mut src, &mut dst)?,
-            Algorithm::Gzip => ctx.write_gzip(&mut src, &mut dst)?,
-            Algorithm::Zstd => ctx.write_zstd(&mut src, &mut dst)?,
-        };
-        let dst_size = dst.metadata()?.len();
+        let dst_size = write_atomic(&dst_path, |dst| match alg {
+            Algorithm::Brotli => ctx.write_brotli(&mut src, dst),
+            Algorithm::Deflate => ctx.write_deflate(&mut src, dst),
+            Algorithm::Gzip => ctx.write_gzip(&mut src, dst),
+            Algorithm::Zstd => ctx.write_zstd(&mut src, dst),
+        })?;
         Ok(Some((src_size, dst_size)))
     }
 
@@ -324,6 +323,34 @@ impl Compressor {
         }
         false
     }
+}
+
+fn write_atomic(
+    dst_path: &Path,
+    write: impl FnOnce(&mut File) -> io::Result<()>,
+) -> io::Result<u64> {
+    let tmp_path = tmp_output_path(dst_path);
+    let result = (|| {
+        let mut dst = File::create(&tmp_path)?;
+        write(&mut dst)?;
+        dst.sync_all()?;
+        let dst_size = dst.metadata()?.len();
+        drop(dst);
+        fs::rename(&tmp_path, dst_path)?;
+        Ok(dst_size)
+    })();
+
+    if result.is_err() {
+        _ = fs::remove_file(&tmp_path);
+    }
+
+    result
+}
+
+fn tmp_output_path(dst_path: &Path) -> PathBuf {
+    let mut file_name = dst_path.file_name().unwrap_or_default().to_os_string();
+    file_name.push(".tmp");
+    dst_path.with_file_name(file_name)
 }
 
 fn build_walk(path: &Path, walk_options: &WalkOptions) -> Result<ignore::Walk> {
@@ -399,13 +426,14 @@ static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {
 mod tests {
     use std::{
         fs,
+        io::{self, Write},
         path::{Path, PathBuf},
         time::{SystemTime, UNIX_EPOCH},
     };
 
     use anyhow::Result;
 
-    use super::{WalkOptions, build_walk};
+    use super::{WalkOptions, build_walk, tmp_output_path, write_atomic};
 
     #[test]
     fn walk_respects_ignore_files_by_default() -> Result<()> {
@@ -456,6 +484,27 @@ mod tests {
         let entries = walk_paths(&root, &options)?;
         assert!(entries.contains(&String::from("ignored/keep.txt")));
         assert!(!entries.contains(&String::from("skip.txt")));
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn write_atomic_preserves_existing_output_on_failure() -> Result<()> {
+        let root = test_dir("atomic-write-failure");
+        let dst_path = root.join("asset.js.gz");
+        let tmp_path = tmp_output_path(&dst_path);
+        fs::write(&dst_path, b"existing artifact")?;
+
+        let err = write_atomic(&dst_path, |dst| {
+            dst.write_all(b"partial replacement")?;
+            Err(io::Error::other("boom"))
+        })
+        .expect_err("write should fail");
+
+        assert_eq!(err.kind(), io::ErrorKind::Other);
+        assert_eq!(fs::read(&dst_path)?, b"existing artifact");
+        assert!(!tmp_path.exists());
 
         fs::remove_dir_all(root)?;
         Ok(())
