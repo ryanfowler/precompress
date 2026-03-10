@@ -51,8 +51,8 @@ fn main() {
     let took = start.elapsed();
 
     eprintln!(
-        "Compressed {} files in {}",
-        stats.num_files,
+        "Compressed {} source files in {}",
+        stats.num_source_files,
         format_duration(took)
     );
     eprintln!("Data compression:");
