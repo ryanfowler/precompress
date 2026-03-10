@@ -2,7 +2,7 @@ use std::{
     cmp::max,
     collections::HashSet,
     fs::{self, File},
-    io,
+    io::{self, Seek},
     mem::take,
     path::{Path, PathBuf},
     thread::{JoinHandle, spawn},
@@ -151,7 +151,6 @@ impl std::ops::Add<AlgStat> for AlgStat {
 pub(crate) struct Compressor {
     tx: Sender<Unit>,
     handles: Vec<JoinHandle<Stats>>,
-    algorithms: Algorithms,
     extensions: Option<HashSet<String>>,
     #[allow(dead_code)]
     verbose: bool,
@@ -172,7 +171,7 @@ impl Default for WalkOptions {
     }
 }
 
-type Unit = (Algorithm, PathBuf);
+type Unit = PathBuf;
 
 impl Compressor {
     pub(crate) fn new(
@@ -189,14 +188,14 @@ impl Compressor {
         let handles = (0..threads)
             .map(|_| {
                 let rx = rx.clone();
-                spawn(move || Compressor::worker(rx, min_size, quality, verbose))
+                let algorithms: Vec<_> = algorithms.iter().collect();
+                spawn(move || Compressor::worker(rx, min_size, quality, algorithms, verbose))
             })
             .collect();
 
         Compressor {
             tx,
             handles,
-            algorithms,
             extensions,
             verbose,
         }
@@ -214,16 +213,8 @@ impl Compressor {
             };
             let path = entry.path();
             if self.should_compress(path) && !path.is_symlink() && path.is_file() {
-                let path = path.to_path_buf();
-                let algs: Vec<_> = self.algorithms.iter().collect();
-                let (last, rest) = algs.split_last().unwrap();
-                for alg in rest {
-                    self.tx
-                        .send((*alg, path.clone()))
-                        .expect("unable to send on channel");
-                }
                 self.tx
-                    .send((*last, path))
+                    .send(path.to_path_buf())
                     .expect("unable to send on channel");
             }
         }
@@ -240,75 +231,99 @@ impl Compressor {
         })
     }
 
-    fn worker(rx: Receiver<Unit>, min_size: u64, quality: Quality, verbose: bool) -> Stats {
+    fn worker(
+        rx: Receiver<Unit>,
+        min_size: u64,
+        quality: Quality,
+        algorithms: Vec<Algorithm>,
+        verbose: bool,
+    ) -> Stats {
         let mut stats = Stats::default();
         let mut ctx = Context::new(1 << 14, quality);
 
-        while let Ok((algorithm, pathbuf)) = rx.recv() {
-            let start = Instant::now();
-            match Compressor::encode_file(&mut ctx, min_size, algorithm, &pathbuf) {
+        while let Ok(pathbuf) = rx.recv() {
+            match Compressor::open_source_file(min_size, &pathbuf) {
                 Err(err) => {
                     eprintln!("Warning: {}: {}", pathbuf.display(), err);
                     stats.num_errors += 1;
                 }
-                Ok(Some((src, dst))) => {
-                    let dur = start.elapsed();
-                    let saved = src as i64 - dst as i64;
-                    if verbose {
-                        let sign = if saved < 0 { "-" } else { "" };
-                        eprintln!(
-                            "{}: {} ({}%, {}{})",
-                            algorithm,
-                            pathbuf.display(),
-                            calc_savings(saved, dst),
-                            sign,
-                            format_bytes(saved.unsigned_abs()),
-                        );
-                    }
-                    let s = match algorithm {
-                        Algorithm::Brotli => &mut stats.brotli,
-                        Algorithm::Deflate => &mut stats.deflate,
-                        Algorithm::Gzip => &mut stats.gzip,
-                        Algorithm::Zstd => &mut stats.zstd,
-                    };
-                    s.total_time += dur;
-                    s.saved_bytes += saved;
-                    s.total_bytes += dst;
-                    stats.num_files += 1;
-                }
                 Ok(None) => {}
+                Ok(Some((mut src, src_size))) => {
+                    let mut compressed = false;
+                    for algorithm in &algorithms {
+                        let start = Instant::now();
+                        match Compressor::encode_file(&mut ctx, &mut src, *algorithm, &pathbuf) {
+                            Err(err) => {
+                                eprintln!("Warning: {}: {}", pathbuf.display(), err);
+                                stats.num_errors += 1;
+                            }
+                            Ok(dst) => {
+                                let dur = start.elapsed();
+                                let saved = src_size as i64 - dst as i64;
+                                if verbose {
+                                    let sign = if saved < 0 { "-" } else { "" };
+                                    eprintln!(
+                                        "{}: {} ({}%, {}{})",
+                                        algorithm,
+                                        pathbuf.display(),
+                                        calc_savings(saved, dst),
+                                        sign,
+                                        format_bytes(saved.unsigned_abs()),
+                                    );
+                                }
+                                let s = match algorithm {
+                                    Algorithm::Brotli => &mut stats.brotli,
+                                    Algorithm::Deflate => &mut stats.deflate,
+                                    Algorithm::Gzip => &mut stats.gzip,
+                                    Algorithm::Zstd => &mut stats.zstd,
+                                };
+                                s.total_time += dur;
+                                s.saved_bytes += saved;
+                                s.total_bytes += dst;
+                                compressed = true;
+                            }
+                        }
+                    }
+
+                    if compressed {
+                        stats.num_files += 1;
+                    }
+                }
             }
         }
 
         stats
     }
 
-    fn encode_file(
-        ctx: &mut Context,
-        min_size: u64,
-        alg: Algorithm,
-        path: &Path,
-    ) -> Result<Option<(u64, u64)>> {
-        let mut src = File::open(path)?;
+    fn open_source_file(min_size: u64, path: &Path) -> Result<Option<(File, u64)>> {
+        let src = File::open(path)?;
         let src_size = src.metadata()?.len();
         if src_size < min_size {
             return Ok(None);
         }
+        Ok(Some((src, src_size)))
+    }
 
+    fn encode_file(ctx: &mut Context, src: &mut File, alg: Algorithm, path: &Path) -> Result<u64> {
+        src.rewind()?;
         let mut file_name = match path.file_name() {
-            None => return Ok(None),
+            None => {
+                return Err(
+                    io::Error::new(io::ErrorKind::InvalidInput, "path has no file name").into(),
+                );
+            }
             Some(name) => name.to_os_string(),
         };
         file_name.push(alg.extension());
         let dst_path = path.with_file_name(file_name);
 
         let dst_size = write_atomic(&dst_path, |dst| match alg {
-            Algorithm::Brotli => ctx.write_brotli(&mut src, dst),
-            Algorithm::Deflate => ctx.write_deflate(&mut src, dst),
-            Algorithm::Gzip => ctx.write_gzip(&mut src, dst),
-            Algorithm::Zstd => ctx.write_zstd(&mut src, dst),
+            Algorithm::Brotli => ctx.write_brotli(src, dst),
+            Algorithm::Deflate => ctx.write_deflate(src, dst),
+            Algorithm::Gzip => ctx.write_gzip(src, dst),
+            Algorithm::Zstd => ctx.write_zstd(src, dst),
         })?;
-        Ok(Some((src_size, dst_size)))
+        Ok(dst_size)
     }
 
     fn should_compress(&self, path: &Path) -> bool {
@@ -433,7 +448,9 @@ mod tests {
 
     use anyhow::Result;
 
-    use super::{WalkOptions, build_walk, tmp_output_path, write_atomic};
+    use crate::encode::Quality;
+
+    use super::{Algorithms, Compressor, WalkOptions, build_walk, tmp_output_path, write_atomic};
 
     #[test]
     fn walk_respects_ignore_files_by_default() -> Result<()> {
@@ -505,6 +522,34 @@ mod tests {
         assert_eq!(err.kind(), io::ErrorKind::Other);
         assert_eq!(fs::read(&dst_path)?, b"existing artifact");
         assert!(!tmp_path.exists());
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn compressor_processes_each_source_file_once_for_all_algorithms() -> Result<()> {
+        let root = test_dir("per-file-work");
+        let src_path = root.join("asset.js");
+        fs::write(&src_path, "const x = 'hello world';\n".repeat(256))?;
+
+        let algorithms = Algorithms {
+            brotli: true,
+            deflate: false,
+            gzip: true,
+            zstd: false,
+        };
+        let compressor = Compressor::new(1, 1, Quality::default(), algorithms, None, false);
+        compressor.precompress(&root, &WalkOptions::default())?;
+        let stats = compressor.finish();
+
+        assert_eq!(stats.num_files, 1);
+        assert!(stats.brotli.total_bytes > 0);
+        assert!(stats.gzip.total_bytes > 0);
+        assert_eq!(stats.deflate.total_bytes, 0);
+        assert_eq!(stats.zstd.total_bytes, 0);
+        assert!(src_path.with_file_name("asset.js.br").is_file());
+        assert!(src_path.with_file_name("asset.js.gz").is_file());
 
         fs::remove_dir_all(root)?;
         Ok(())
