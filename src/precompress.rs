@@ -94,7 +94,7 @@ impl Algorithms {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Stats {
-    pub(crate) num_files: u64,
+    pub(crate) num_source_files: u64,
     pub(crate) num_errors: u64,
 
     pub(crate) brotli: AlgStat,
@@ -119,7 +119,7 @@ impl std::ops::Add<Stats> for Stats {
 
     fn add(self, rhs: Stats) -> Stats {
         Stats {
-            num_files: self.num_files + rhs.num_files,
+            num_source_files: self.num_source_files + rhs.num_source_files,
             num_errors: self.num_errors + rhs.num_errors,
             brotli: self.brotli + rhs.brotli,
             deflate: self.deflate + rhs.deflate,
@@ -286,7 +286,7 @@ impl Compressor {
                     }
 
                     if compressed {
-                        stats.num_files += 1;
+                        stats.num_source_files += 1;
                     }
                 }
             }
@@ -543,7 +543,7 @@ mod tests {
         compressor.precompress(&root, &WalkOptions::default())?;
         let stats = compressor.finish();
 
-        assert_eq!(stats.num_files, 1);
+        assert_eq!(stats.num_source_files, 1);
         assert!(stats.brotli.total_bytes > 0);
         assert!(stats.gzip.total_bytes > 0);
         assert_eq!(stats.deflate.total_bytes, 0);
