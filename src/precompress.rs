@@ -10,6 +10,7 @@ use std::{
 
 use anyhow::Result;
 use crossbeam::channel::{Receiver, Sender, bounded};
+use ignore::overrides::OverrideBuilder;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -155,6 +156,21 @@ pub(crate) struct Compressor {
     verbose: bool,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct WalkOptions {
+    pub(crate) respect_ignore: bool,
+    pub(crate) exclude: Vec<String>,
+}
+
+impl Default for WalkOptions {
+    fn default() -> Self {
+        Self {
+            respect_ignore: true,
+            exclude: Vec::new(),
+        }
+    }
+}
+
 type Unit = (Algorithm, PathBuf);
 
 impl Compressor {
@@ -185,14 +201,8 @@ impl Compressor {
         }
     }
 
-    pub(crate) fn precompress(&self, path: &Path) {
-        let walk = ignore::WalkBuilder::new(path)
-            .ignore(false)
-            .git_exclude(false)
-            .git_global(false)
-            .git_ignore(false)
-            .follow_links(false)
-            .build();
+    pub(crate) fn precompress(&self, path: &Path, walk_options: &WalkOptions) -> Result<()> {
+        let walk = build_walk(path, walk_options)?;
         for entry in walk {
             let entry = match entry {
                 Ok(entry) => entry,
@@ -216,6 +226,8 @@ impl Compressor {
                     .expect("unable to send on channel");
             }
         }
+
+        Ok(())
     }
 
     pub(crate) fn finish(mut self) -> Stats {
@@ -314,6 +326,31 @@ impl Compressor {
     }
 }
 
+fn build_walk(path: &Path, walk_options: &WalkOptions) -> Result<ignore::Walk> {
+    let mut builder = ignore::WalkBuilder::new(path);
+    builder.follow_links(false);
+    builder.require_git(false);
+
+    if !walk_options.respect_ignore {
+        builder
+            .parents(false)
+            .ignore(false)
+            .git_exclude(false)
+            .git_global(false)
+            .git_ignore(false);
+    }
+
+    if !walk_options.exclude.is_empty() {
+        let mut overrides = OverrideBuilder::new(path);
+        for pattern in &walk_options.exclude {
+            overrides.add(&format!("!{pattern}"))?;
+        }
+        builder.overrides(overrides.build()?);
+    }
+
+    Ok(builder.build())
+}
+
 static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {
     "atom",
     "cfg",
@@ -357,3 +394,96 @@ static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {
     "yaml",
     "yml",
 };
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use anyhow::Result;
+
+    use super::{WalkOptions, build_walk};
+
+    #[test]
+    fn walk_respects_ignore_files_by_default() -> Result<()> {
+        let root = test_dir("respect-ignore-default");
+        fs::write(root.join(".ignore"), "ignored/\n")?;
+        fs::create_dir(root.join("ignored"))?;
+        fs::write(root.join("ignored/file.txt"), "data")?;
+        fs::write(root.join("visible.txt"), "data")?;
+
+        let entries = walk_paths(&root, &WalkOptions::default())?;
+        assert!(entries.contains(&String::from("visible.txt")));
+        assert!(!entries.iter().any(|path| path.starts_with("ignored/")));
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn walk_respects_gitignore_in_git_repositories() -> Result<()> {
+        let root = test_dir("respect-gitignore");
+        fs::create_dir(root.join(".git"))?;
+        fs::write(root.join(".gitignore"), "ignored/\n")?;
+        fs::create_dir(root.join("ignored"))?;
+        fs::write(root.join("ignored/file.txt"), "data")?;
+        fs::write(root.join("visible.txt"), "data")?;
+
+        let entries = walk_paths(&root, &WalkOptions::default())?;
+        assert!(entries.contains(&String::from("visible.txt")));
+        assert!(!entries.iter().any(|path| path.starts_with("ignored/")));
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn walk_can_disable_ignore_files_and_apply_excludes() -> Result<()> {
+        let root = test_dir("ignore-overrides");
+        fs::write(root.join(".ignore"), "ignored/\n")?;
+        fs::create_dir(root.join("ignored"))?;
+        fs::write(root.join("ignored/keep.txt"), "data")?;
+        fs::write(root.join("skip.txt"), "data")?;
+
+        let options = WalkOptions {
+            respect_ignore: false,
+            exclude: vec![String::from("skip.txt")],
+        };
+
+        let entries = walk_paths(&root, &options)?;
+        assert!(entries.contains(&String::from("ignored/keep.txt")));
+        assert!(!entries.contains(&String::from("skip.txt")));
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    fn walk_paths(root: &Path, options: &WalkOptions) -> Result<Vec<String>> {
+        let mut paths = build_walk(root, options)?
+            .filter_map(|entry| entry.ok())
+            .filter_map(|entry| {
+                entry
+                    .path()
+                    .strip_prefix(root)
+                    .ok()
+                    .and_then(|path| (!path.as_os_str().is_empty()).then_some(path))
+                    .map(|path| path.to_string_lossy().replace('\\', "/"))
+            })
+            .collect::<Vec<_>>();
+        paths.sort();
+        Ok(paths)
+    }
+
+    fn test_dir(name: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time went backwards")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("precompress-{name}-{unique}"));
+        fs::create_dir_all(&root).expect("unable to create temp directory");
+        root
+    }
+}
