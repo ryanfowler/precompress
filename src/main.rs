@@ -11,7 +11,7 @@ use mimalloc::MiMalloc;
 use precompress::Algorithm;
 
 use crate::encode::Quality;
-use crate::precompress::{Algorithms, Compressor, Stats};
+use crate::precompress::{Algorithms, Compressor, Stats, WalkOptions};
 
 mod encode;
 mod precompress;
@@ -33,15 +33,20 @@ fn main() {
         exit(1);
     }
 
-    let exts = args.extensions.map(|v| {
-        v.into_iter()
-            .flat_map(|s| s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
-            .collect::<HashSet<String>>()
-    });
+    let exts = args
+        .extensions
+        .map(|v| split_csv(v).collect::<HashSet<String>>());
+    let walk_options = WalkOptions {
+        respect_ignore: !args.no_respect_ignore,
+        exclude: args.exclude.map(split_csv).into_iter().flatten().collect(),
+    };
 
     let cmp = Compressor::new(threads, args.min_size, quality, algs, exts, args.verbose);
     let start = Instant::now();
-    cmp.precompress(&args.path);
+    if let Err(err) = cmp.precompress(&args.path, &walk_options) {
+        eprintln!("Error: {err}");
+        exit(1);
+    }
     let stats = cmp.finish();
     let took = start.elapsed();
 
@@ -82,6 +87,14 @@ struct Args {
     /// Print per-file compression results.
     #[clap(short, long)]
     verbose: bool,
+
+    /// Do not respect ignore files such as `.gitignore` and `.ignore`.
+    #[clap(long)]
+    no_respect_ignore: bool,
+
+    /// Exclude paths matching a gitignore-style glob.
+    #[clap(long)]
+    exclude: Option<Vec<String>>,
 }
 
 fn parse_compression(compression: Option<Vec<String>>) -> (Algorithms, Quality) {
@@ -170,6 +183,13 @@ fn print_alg_savings(alg: Algorithm, stats: &Stats) {
     );
 }
 
+fn split_csv(values: Vec<String>) -> impl Iterator<Item = String> {
+    values
+        .into_iter()
+        .flat_map(|s| s.split(',').map(str::to_owned).collect::<Vec<_>>())
+        .filter(|s| !s.is_empty())
+}
+
 pub(crate) fn calc_savings(saved: i64, total: u64) -> u8 {
     if saved == 0 && total == 0 {
         return 0;
@@ -197,5 +217,31 @@ fn format_duration(dur: Duration) -> String {
         format!("{}ms", dur.as_millis())
     } else {
         format!("{:.1}s", dur.as_secs_f64())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::{Args, split_csv};
+
+    #[test]
+    fn args_respect_ignore_by_default() {
+        let args = Args::parse_from(["precompress", "."]);
+        assert!(!args.no_respect_ignore);
+        assert!(args.exclude.is_none());
+    }
+
+    #[test]
+    fn args_allow_disabling_ignore_handling() {
+        let args = Args::parse_from(["precompress", "--no-respect-ignore", "."]);
+        assert!(args.no_respect_ignore);
+    }
+
+    #[test]
+    fn split_csv_expands_repeated_and_comma_separated_values() {
+        let values = split_csv(vec![String::from("a,b"), String::from("c")]).collect::<Vec<_>>();
+        assert_eq!(values, vec!["a", "b", "c"]);
     }
 }

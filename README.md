@@ -50,6 +50,8 @@ Options:
   -m, --min-size <MIN_SIZE>        Set the minimum size of files to be compressed in bytes [default: 1024]
   -t, --threads <THREADS>          Number of threads to use; "0" uses the number of cpus [default: 0]
   -v, --verbose                    Print per-file compression results
+      --no-respect-ignore          Do not respect ignore files such as `.gitignore` and `.ignore`
+      --exclude <EXCLUDE>          Exclude paths matching a gitignore-style glob
   -h, --help                       Print help
   -V, --version                    Print version
 ```
@@ -90,6 +92,14 @@ or
 
 ```
 precompress -e css,json,html .
+```
+
+Traversal respects `.ignore`, `.gitignore`, `.git/info/exclude`, and git's
+global ignore file by default. Pass `--no-respect-ignore` to scan ignored
+directories too, and use `--exclude` to add extra gitignore-style globs:
+
+```
+precompress --exclude node_modules --exclude '*.min.js' .
 ```
 
 ### Example
