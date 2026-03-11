@@ -440,6 +440,7 @@ static EXTENSIONS: phf::Set<&'static str> = phf::phf_set! {
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::HashSet,
         fs,
         io::{self, Write},
         path::{Path, PathBuf},
@@ -550,6 +551,123 @@ mod tests {
         assert_eq!(stats.zstd.total_bytes, 0);
         assert!(src_path.with_file_name("asset.js.br").is_file());
         assert!(src_path.with_file_name("asset.js.gz").is_file());
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn compressor_uses_default_and_custom_extension_filters() {
+        let default = Compressor::new(1, 1, Quality::default(), Algorithms::default(), None, false);
+        let custom = Compressor::new(
+            1,
+            1,
+            Quality::default(),
+            Algorithms::default(),
+            Some(HashSet::from([String::from("bin")])),
+            false,
+        );
+
+        assert!(default.should_compress(Path::new("asset.js")));
+        assert!(!default.should_compress(Path::new("asset.bin")));
+        assert!(!default.should_compress(Path::new("LICENSE")));
+        assert!(custom.should_compress(Path::new("asset.bin")));
+        assert!(!custom.should_compress(Path::new("asset.js")));
+    }
+
+    #[test]
+    fn compressor_skips_small_and_filtered_out_files() -> Result<()> {
+        let root = test_dir("skip-files");
+        fs::write(root.join("small.js"), "tiny")?;
+        fs::write(root.join("note.txt"), "ignored extension")?;
+
+        let compressor = Compressor::new(
+            1,
+            32,
+            Quality::default(),
+            Algorithms {
+                brotli: false,
+                deflate: false,
+                gzip: true,
+                zstd: false,
+            },
+            Some(HashSet::from([String::from("js")])),
+            false,
+        );
+        compressor.precompress(&root, &WalkOptions::default())?;
+        let stats = compressor.finish();
+
+        assert_eq!(stats.num_source_files, 0);
+        assert_eq!(stats.num_errors, 0);
+        assert!(!root.join("small.js.gz").exists());
+        assert!(!root.join("note.txt.gz").exists());
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn compressor_overwrites_existing_outputs() -> Result<()> {
+        let root = test_dir("overwrite-output");
+        let src_path = root.join("asset.js");
+        fs::write(&src_path, "const payload = 'hello world';\n".repeat(256))?;
+        let dst_path = root.join("asset.js.gz");
+        fs::write(&dst_path, b"stale artifact")?;
+
+        let original = fs::read(&dst_path)?;
+        let compressor = Compressor::new(
+            1,
+            1,
+            Quality::default(),
+            Algorithms {
+                brotli: false,
+                deflate: false,
+                gzip: true,
+                zstd: false,
+            },
+            None,
+            false,
+        );
+        compressor.precompress(&root, &WalkOptions::default())?;
+        let stats = compressor.finish();
+
+        assert_eq!(stats.num_source_files, 1);
+        assert_eq!(stats.num_errors, 0);
+        assert_ne!(fs::read(&dst_path)?, original);
+
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn compressor_cleans_up_temp_output_after_failed_replace() -> Result<()> {
+        let root = test_dir("cleanup-failed-replace");
+        let src_path = root.join("asset.js");
+        fs::write(&src_path, "const payload = 'hello world';\n".repeat(256))?;
+        let dst_path = root.join("asset.js.gz");
+        let tmp_path = tmp_output_path(&dst_path);
+        fs::create_dir(&dst_path)?;
+
+        let compressor = Compressor::new(
+            1,
+            1,
+            Quality::default(),
+            Algorithms {
+                brotli: false,
+                deflate: false,
+                gzip: true,
+                zstd: false,
+            },
+            None,
+            false,
+        );
+        compressor.precompress(&root, &WalkOptions::default())?;
+        let stats = compressor.finish();
+
+        assert_eq!(stats.num_source_files, 0);
+        assert_eq!(stats.num_errors, 1);
+        assert!(dst_path.is_dir());
+        assert!(!tmp_path.exists());
 
         fs::remove_dir_all(root)?;
         Ok(())
