@@ -224,7 +224,8 @@ fn format_duration(dur: Duration) -> String {
 mod tests {
     use clap::Parser;
 
-    use super::{Args, split_csv};
+    use super::{Args, calc_savings, parse_compression, split_csv};
+    use crate::precompress::Algorithm;
 
     #[test]
     fn args_respect_ignore_by_default() {
@@ -243,5 +244,74 @@ mod tests {
     fn split_csv_expands_repeated_and_comma_separated_values() {
         let values = split_csv(vec![String::from("a,b"), String::from("c")]).collect::<Vec<_>>();
         assert_eq!(values, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn args_accept_repeated_and_comma_separated_filters() {
+        let args = Args::parse_from([
+            "precompress",
+            "--extensions",
+            "js,css",
+            "--extensions",
+            "html",
+            "--exclude",
+            "dist/**,build/**",
+            "--exclude",
+            "*.map",
+            ".",
+        ]);
+
+        assert_eq!(
+            split_csv(args.extensions.expect("extensions should be parsed")).collect::<Vec<_>>(),
+            vec!["js", "css", "html"]
+        );
+        assert_eq!(
+            split_csv(args.exclude.expect("exclude should be parsed")).collect::<Vec<_>>(),
+            vec!["dist/**", "build/**", "*.map"]
+        );
+    }
+
+    #[test]
+    fn parse_compression_supports_aliases_and_quality_overrides() {
+        let (algorithms, quality) = parse_compression(Some(vec![
+            String::from("br:11,gzip:5"),
+            String::from("zst:-3"),
+        ]));
+
+        assert!(algorithms.brotli);
+        assert!(!algorithms.deflate);
+        assert!(algorithms.gzip);
+        assert!(algorithms.zstd);
+        assert_eq!(quality.brotli, 11);
+        assert_eq!(quality.gzip, 5);
+        assert_eq!(quality.zstd, -3);
+    }
+
+    #[test]
+    fn parse_compression_defaults_match_enabled_algorithms() {
+        let (algorithms, quality) = parse_compression(None);
+        let enabled = algorithms
+            .iter()
+            .map(|alg| alg.to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            enabled,
+            vec![
+                Algorithm::Brotli.to_string(),
+                Algorithm::Gzip.to_string(),
+                Algorithm::Zstd.to_string(),
+            ]
+        );
+        assert_eq!(quality.brotli, 10);
+        assert_eq!(quality.gzip, 7);
+        assert_eq!(quality.zstd, 19);
+    }
+
+    #[test]
+    fn calc_savings_handles_zero_positive_and_negative_values() {
+        assert_eq!(calc_savings(0, 0), 0);
+        assert_eq!(calc_savings(50, 50), 50);
+        assert_eq!(calc_savings(-50, 100), 0);
     }
 }
