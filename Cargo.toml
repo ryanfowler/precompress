@@ -26,7 +26,7 @@ brotli = { version = "8.0.3" }
 clap = { version = "4.6.1", features = ["derive"] }
 crossbeam = { version = "0.8.4" }
 flate2 = { version = "1.1.9" }
-ignore = { version = "0.4.25" }
+ignore = { version = "0.4.26" }
 mimalloc = { version = "0.1.52" }
 phf = { version = "0.13.1", features = ["macros"] }
 strum = { version = "0.28.0" }
